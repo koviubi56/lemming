@@ -259,35 +259,30 @@ def _linters(
 
 
 def main(*, run_formatters: bool = True) -> None:
-    try:
-        with Timer() as all_timer:
-            with Timer() as config_timer:
-                (
-                    configuration,
-                    paths_to_check,
-                    what_to_quiet,
-                ) = get_configuration()
-            logger.debug(f"Got configuration in {config_timer.time} seconds")
+    with Timer() as all_timer:
+        with Timer() as config_timer:
+            (
+                configuration,
+                paths_to_check,
+                what_to_quiet,
+            ) = get_configuration()
+        logger.debug(f"Got configuration in {config_timer.time} seconds")
 
-            if run_formatters:
-                _formatters(configuration, paths_to_check, what_to_quiet)
-            else:
-                logger.info("Formatters are not being run.")
+        if run_formatters:
+            _formatters(configuration, paths_to_check, what_to_quiet)
+        else:
+            logger.info("Formatters are not being run.")
 
-            _linters(configuration, paths_to_check, what_to_quiet)
+        _linters(configuration, paths_to_check, what_to_quiet)
 
+    logger.info(
+        f"Successfully ran all formatters and linters in {all_timer.time}"
+        " seconds with no errors. Good job!"
+    )
+    if not what_to_quiet[1]:
         logger.info(
-            f"Successfully ran all formatters and linters in {all_timer.time}"
-            " seconds with no errors. Good job!"
-        )
-        if not what_to_quiet[1]:
-            logger.info(
-                "*!*!* HINT: Do you get overwhelmed by pip's output? Consider"
-                " using the --quiet-pip argument for Lemming !*!*!"
-            )
-    except Exception:
-        logger.critical(
-            "We crashed! See the traceback for more information:", True
+            "*!*!* HINT: Do you get overwhelmed by pip's output? Consider"
+            " using the --quiet-pip argument for Lemming !*!*!"
         )
 
 
