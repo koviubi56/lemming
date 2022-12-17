@@ -60,6 +60,8 @@ After [installing](#installation) Lemming, run
 lemming .
 ```
 
+You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lemming.yml).
+
 ## CLI usage
 
 ```text
