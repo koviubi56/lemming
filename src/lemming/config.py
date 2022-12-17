@@ -349,9 +349,10 @@ class FormatterOrLinter(pydantic.BaseModel):
         also_install = " ".join(self.also_install)
         cmd = cmd.replace("{also_install}", also_install)
 
-        logger.debug(f"Running command {cmd!r}")
+        splitted = shlex.split(cmd, posix=os.name != "nt")
+        logger.debug(f"Running command {splitted!r}")
         completed_process = subprocess.run(  # noqa: S603
-            shlex.split(cmd, posix=os.name != "nt"),
+            splitted,
             check=False,
             capture_output=quiet,
         )
