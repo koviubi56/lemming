@@ -34,6 +34,7 @@ import pathlib
 import subprocess  # noqa: S404
 import sys
 from typing import Any, Generator, TypeVar, cast
+import shlex
 
 import pydantic
 from typing_extensions import Self
@@ -350,7 +351,9 @@ class FormatterOrLinter(pydantic.BaseModel):
 
         logger.debug(f"Running command {cmd!r}")
         completed_process = subprocess.run(  # noqa: S603
-            cmd, check=False, capture_output=quiet
+            shlex.split(cmd, posix=os.name != "nt"),
+            check=False,
+            capture_output=quiet,
         )
         exit_status = completed_process.returncode
         if exit_status == 0:
