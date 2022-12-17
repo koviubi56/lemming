@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=42.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.isort]
+profile = "black"
+
+[[tool.lemming.formatters]]
+package = "black"
+args = "-l 79 {path}"
+
+[[tool.lemming.formatters]]
+package = "setup_cfg_fmt"
+args = "--include-version-classifiers"
+
+[[tool.lemming.formatters]]
+package = "yesqa"
+# args = "{path}"
+
+[[tool.lemming.formatters]]
+package = "isort"
+args = "--profile black {path}"
+
+[[tool.lemming.linters]]
+package = "flake8"
+args = "--count --exclude *venv* --show-source --statistics --extend-ignore=W503 {path}"
+also_install = ["flake8-bandit"]
+
+[[tool.lemming.linters]]
+package = "pyroma"
+args = "{path}"
