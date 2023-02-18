@@ -31,10 +31,10 @@ except Exception:
 import contextlib
 import os
 import pathlib
+import shlex
 import subprocess  # noqa: S404
 import sys
 from typing import Any, Generator, TypeVar, cast
-import shlex
 
 import pydantic
 from typing_extensions import Self
@@ -275,36 +275,13 @@ def find_config_file(
 class FormatterOrLinter(pydantic.BaseModel):
     """
     An "ABC" for formatters and linters.
-    Does all of the work except the method .run().
 
     Args:
-        package (str): The package's name. This will be used to install and
-        run it!
-        version (str | None, optional): The package's version. If None it will
-        be the latest stable version. Defaults to None.
-        args (str, optional): Arguments to the formatter/linter. Defaults
-        to "".
-        allow_nonzero (bool, optional): Allow non-zero exit status for
-        formatters (not linters!). Defaults to False.
-        install_name (str | None, optional): The package's name to install. If
-        it's None, it defaults to `package`. Defaults to None.
+        packages (list[str]): The packages' name (optionally versions
+        with "==x.y.z") to install with pip.
     """
 
-    package: str
-    version: str | None = None
-    args: str = ""
-    allow_nonzero: bool = False
-    also_install: list[str] = []
-    install_name: str | None = None
-
-    def get_version(self) -> str:
-        """
-        Get the version stuff.
-
-        Returns:
-            str: f"=={self.version}" if self.version else ""
-        """
-        return f"=={self.version}" if self.version else ""
+    packages: list[str]
 
     @staticmethod
     def get_pyexe() -> str:
@@ -326,9 +303,6 @@ class FormatterOrLinter(pydantic.BaseModel):
         Run command `cmd`.
         Also replaces these:
         - `{pyexe}` -> `sys.executable`
-        - `{package}` -> `self.package`
-        - `{also_install}` -> `self.also_install`
-        - `{args}` -> `self.args`
 
         In `self.args` `{path}` be replaced by `paths_to_check`.
 
@@ -342,12 +316,10 @@ class FormatterOrLinter(pydantic.BaseModel):
         """
         cmd = cmd.strip()
         cmd = cmd.replace("{pyexe}", sys.executable)
-        cmd = cmd.replace("{package}", self.package)
-        cmd = cmd.replace("{args}", self.args)
         paths = " ".join(map(str, paths_to_check))
         cmd = cmd.replace("{path}", paths)
-        also_install = " ".join(self.also_install)
-        cmd = cmd.replace("{also_install}", also_install)
+        packages = " ".join(self.packages)
+        cmd = cmd.replace("{packages}", packages)
 
         splitted = shlex.split(cmd, posix=os.name != "nt")
         logger.debug(f"Running command {splitted!r}")
@@ -372,8 +344,7 @@ class FormatterOrLinter(pydantic.BaseModel):
 
     def install(self, quiet: bool) -> bool:
         """
-        Install.
-        Runs the following command: `{pyexe} -m pip install -U {package}`
+        Install the packages.
 
         Args:
             quiet (bool): Don't let `pip` write to stdout and stderr.
@@ -381,16 +352,11 @@ class FormatterOrLinter(pydantic.BaseModel):
         Returns:
             bool: `exit_status == 0`
         """
-        logger.info(f"Installing {self.package} (and {self.also_install})")
+        logger.info(f"Installing {self.packages}")
         with logger.ctxmgr:
             return self.run_command(
-                "{pyexe} -m pip install -U {package} {also_install}", [], quiet
+                "{pyexe} -m pip install -U {packages}", [], quiet
             )
-
-    def _run(self, paths_to_check: list[pathlib.Path], quiet: bool) -> bool:
-        return self.run_command(
-            "{pyexe} -m {package} {args}", paths_to_check, quiet
-        )
 
     def run(
         self,
@@ -399,60 +365,89 @@ class FormatterOrLinter(pydantic.BaseModel):
     ) -> bool:
         raise NotImplementedError
 
-    @classmethod
-    def from_dict(cls, dictionary: dict[str, Any]) -> Self:
-        """
-        Return `Self` from a dictionary.
-
-        Args:
-            dictionary (dict[str, Any]): The dictionary to use.
-
-        Returns:
-            Self: The new object from `dictionary`
-        """
-        assert_dict_keys(
-            dictionary,
-            [
-                "package",
-                "version",
-                "args",
-                "allow_nonzero",
-                "also_install",
-                "install_name",
-            ],
-        )
-        return cls(**dictionary)
-
 
 class Formatter(FormatterOrLinter):
-    def run(
+    format_command: str
+    check_command: str | None = None
+    allow_nonzero_on_format: bool = False
+
+    def run_format(
         self,
         paths_to_check: list[pathlib.Path],
         what_to_quiet: tuple[bool, bool],
     ) -> bool:
         if not self.install(what_to_quiet[1]):
             logger.error(
-                f"Could not install formatter {self.package}! See"
+                f"Could not install the packages {self.packages}! See"
                 " pip's output for more information."
             )
-        success = self._run(paths_to_check, what_to_quiet[0])
-        if success or self.allow_nonzero:
-            logger.info(f"Successfully ran formatter {self.package}!")
+            return False
+        success = self.run_command(
+            self.format_command, paths_to_check, what_to_quiet[0]
+        )
+        if success or self.allow_nonzero_on_format:
+            logger.info(
+                f"Successfully ran (format) formatter {self.packages}!"
+            )
         else:
             logger.error(
-                f"Could not run formatter {self.package} ({self.version = !r};"
-                f" {self.args = !r}; {paths_to_check = !r})! (NOTE: Formatters"
-                " are expected to MODIFY the code if the formatter finds a"
-                " violation (not just simply check the code). Formatters are"
-                " also expected to return a ZERO exit status even if the"
-                " formatter had to modify a file. To allow this behavior"
-                ' change "allow_nonzero" to true in the config file for this'
-                " formatter.)"
+                f"Could not run (format) formatter ({self.packages};"
+                f" {self.format_command!r})! (NOTE: The format_command command"
+                " is expected to modify/format the code and return zero. This"
+                " is DIFFERENT from check_command. If you still want to allow"
+                " this, set allow_nonzero_on_format=true for this formatter.)"
             )
         return success
 
+    def run_check(
+        self,
+        paths_to_check: list[pathlib.Path],
+        what_to_quiet: tuple[bool, bool],
+    ) -> bool:
+        if not self.check_command:
+            logger.warning(
+                f"The formatter {self.packages} does NOT have a check_command!"
+                " Skipping..."
+            )
+            return True
+        if not self.install(what_to_quiet[1]):
+            logger.error(
+                f"Could not install the packages {self.packages}! See"
+                " pip's output for more information."
+            )
+            return False
+        success = self.run_command(
+            self.check_command, paths_to_check, what_to_quiet[0]
+        )
+        if success:
+            logger.info(f"Successfully ran (check) formatter {self.packages}!")
+        else:
+            logger.error(
+                f"Could not run (check) formatter ({self.packages};"
+                f" {self.format_command!r})! (NOTE: The check_command command"
+                " is expected to CHECK that the code is up to standards. If"
+                " the code is ok, the command should return 0; otherwise it"
+                " should return non-zero.)"
+            )
+        return success
+
+    @classmethod
+    def from_dict(cls, dict_: dict[str, Any]) -> Self:
+        assert_dict_keys(
+            dict_,
+            [
+                "packages",
+                "format_command",
+                "check_command",
+                "allow_nonzero_on_format",
+            ],
+        )
+        return cls(**dict_)
+
 
 class Linter(FormatterOrLinter):
+    command: str
+
     def run(
         self,
         paths_to_check: list[pathlib.Path],
@@ -460,24 +455,31 @@ class Linter(FormatterOrLinter):
     ) -> bool:
         if not self.install(what_to_quiet[1]):
             logger.error(
-                f"Could not install linter {self.package}! See"
+                f"Could not install linter {self.packages}! See"
                 " pip's output for more information."
             )
-        if self.allow_nonzero:
-            logger.warning(
-                '"allow_nonzero" is set to true in the config file! This'
-                " attribute is only supported for formatters, not linters!"
-                " Ignoring"
-            )
-        success = self._run(paths_to_check, what_to_quiet[0])
+        success = self.run_command(
+            self.command, paths_to_check, what_to_quiet[0]
+        )
         if success:
-            logger.info(f"Successfully ran linter {self.package}!")
+            logger.info(f"Successfully ran linter {self.packages}!")
         else:
             logger.error(
                 "Linting failed! See the linter's output for more"
                 " information!"
             )
         return success
+
+    @classmethod
+    def from_dict(cls, dict_: dict[str, Any]) -> Self:
+        assert_dict_keys(
+            dict_,
+            [
+                "packages",
+                "command",
+            ],
+        )
+        return cls(**dict_)
 
 
 class Config(pydantic.BaseModel):

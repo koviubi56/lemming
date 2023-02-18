@@ -22,7 +22,7 @@ import pathlib
 import time
 
 import mylog
-from typing_extensions import Self
+from typing_extensions import Literal, Self
 
 from . import __version__, config, logger
 
@@ -31,10 +31,16 @@ PARSER = argparse.ArgumentParser(
     prog="lemming",
 )
 PARSER.add_argument(
+    "task",
+    choices=("format", "check"),
+    help="format the code with the formatters, or check the code with the"
+    " formatters (linters will be ran in all cases)",
+)
+PARSER.add_argument(
     "path",
     action="append",
     type=pathlib.Path,
-    help="the paths (files and directories) to check. these arguments will be"
+    help="the paths (files and directories) to check. These arguments will be"
     " passed to the formatters and linters as arguments where {path} is used",
 )
 PARSER.add_argument(
@@ -47,26 +53,26 @@ PARSER.add_argument(
     "-q",
     "--quiet",
     action="count",
-    help="log less information. can be passed multiple times",
+    help="log less information. Can be passed multiple times",
     default=0,
 )
 PARSER.add_argument(
     "--quiet-commands",
     action="store_true",
-    help="don't let ran commands write to stdout and stderr. use --quiet-pip"
+    help="don't let ran commands write to stdout and stderr. Use --quiet-pip"
     " to quiet `pip`",
 )
 PARSER.add_argument(
     "--quiet-pip",
     action="store_true",
-    help="don't let pip write to stdout and stderr. use --quiet-commands"
+    help="don't let pip write to stdout and stderr. Use --quiet-commands"
     " to quiet the formatters and linters",
 )
 PARSER.add_argument(
     "-c",
     "--config",
     default=None,
-    help="the config file to use. if passed all other config files will be"
+    help="the config file to use. If passed all other config files will be"
     " ignored",
 )
 PARSER.add_argument(
@@ -192,9 +198,14 @@ def _get_configuration(args: argparse.Namespace) -> config.Config:
     return configuration
 
 
-def get_configuration() -> tuple[
-    config.Config, list[pathlib.Path], tuple[bool, bool]
-]:
+def get_configuration() -> (
+    tuple[
+        config.Config,
+        list[pathlib.Path],
+        tuple[bool, bool],
+        Literal["format", "check"],
+    ]
+):
     logger.debug("Parsing args")
     with logger.ctxmgr:
         args = parse_args()
@@ -206,30 +217,43 @@ def get_configuration() -> tuple[
         configuration = _get_configuration(args)
 
         what_to_quiet = _get_what_to_quiet(args)
-    return configuration, paths_to_check, what_to_quiet
+
+        task = args.task
+    return configuration, paths_to_check, what_to_quiet, task
 
 
 def _formatters(
     configuration: config.Config,
     paths_to_check: list[pathlib.Path],
     what_to_quiet: tuple[bool, bool],
+    task: Literal["format", "check"],
 ) -> None:
-    logger.info("Running formatters")
+    logger.info(f"Running formatters ({task})")
     with logger.ctxmgr:
         with Timer() as formatters_timer:
             for formatter in configuration.formatters:
-                logger.info(f"Running formatter {formatter.package}")
+                logger.info(f"Running formatter {formatter.packages} ({task})")
                 with logger.ctxmgr:
                     with Timer() as formatter_timer:
-                        success = formatter.run(paths_to_check, what_to_quiet)
+                        if task == "format":
+                            success = formatter.run_format(
+                                paths_to_check, what_to_quiet
+                            )
+                        elif task == "check":
+                            success = formatter.run_check(
+                                paths_to_check, what_to_quiet
+                            )
+                        else:
+                            PARSER.error(f"unknown task: {task!r}")
+
                         if not success:
                             logger.error(
                                 "Could not run formatter"
-                                f" {formatter.package}!"
+                                f" {formatter.packages}!"
                             )
                             PARSER.exit(1, "\nFAILED!\n")
                     logger.info(
-                        f"Ran formatter in {formatter_timer.time}" " seconds"
+                        f"Ran formatter in {formatter_timer.time} seconds"
                     )
         logger.info(f"Ran all formatters in {formatters_timer.time} seconds")
 
@@ -243,13 +267,13 @@ def _linters(
     with logger.ctxmgr:
         with Timer() as linters_timer:
             for linter in configuration.linters:
-                logger.info(f"Running linter {linter.package}")
+                logger.info(f"Running linter {linter.packages}")
                 with logger.ctxmgr:
                     with Timer() as linter_timer:
                         success = linter.run(paths_to_check, what_to_quiet)
                         if not success:
                             logger.error(
-                                f"Could not run linter {linter.package}!"
+                                f"Could not run linter {linter.packages}!"
                                 " Please see the linter's output for more"
                                 " details."
                             )
@@ -258,20 +282,18 @@ def _linters(
         logger.info(f"Ran all linters in {linters_timer.time} seconds")
 
 
-def main(*, run_formatters: bool = True) -> None:
+def main() -> None:
     with Timer() as all_timer:
         with Timer() as config_timer:
             (
                 configuration,
                 paths_to_check,
                 what_to_quiet,
+                task,
             ) = get_configuration()
         logger.debug(f"Got configuration in {config_timer.time} seconds")
 
-        if run_formatters:
-            _formatters(configuration, paths_to_check, what_to_quiet)
-        else:
-            logger.info("Formatters are not being run.")
+        _formatters(configuration, paths_to_check, what_to_quiet, task)
 
         _linters(configuration, paths_to_check, what_to_quiet)
 
