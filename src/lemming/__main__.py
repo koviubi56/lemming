@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import pathlib
 import time
+from typing import List, Tuple
 
 import mylog
 from typing_extensions import Literal, Self
@@ -102,7 +103,7 @@ def parse_args() -> argparse.Namespace:
     return PARSER.parse_args()
 
 
-def _get_paths_to_check(args: argparse.Namespace) -> list[pathlib.Path]:
+def _get_paths_to_check(args: argparse.Namespace) -> List[pathlib.Path]:
     paths_to_check = args.path
     logger.debug(f"{paths_to_check = !r}")
     if not (
@@ -133,8 +134,8 @@ def _set_logger(args: argparse.Namespace) -> None:
     logger.debug(f"{logger.threshold = !r}")
 
 
-def _get_what_to_quiet(args: argparse.Namespace) -> tuple[bool, bool]:
-    return (args.quiet_commands, args.quiet_pip)
+def _get_what_to_quiet(args: argparse.Namespace) -> config.WhatToQuiet:
+    return config.WhatToQuiet(args.quiet_commands, args.quiet_pip)
 
 
 def _get_config_file(args: argparse.Namespace) -> pathlib.Path:
@@ -199,10 +200,10 @@ def _get_configuration(args: argparse.Namespace) -> config.Config:
 
 
 def get_configuration() -> (
-    tuple[
+    Tuple[
         config.Config,
-        list[pathlib.Path],
-        tuple[bool, bool],
+        List[pathlib.Path],
+        config.WhatToQuiet,
         Literal["format", "check"],
     ]
 ):
@@ -224,8 +225,8 @@ def get_configuration() -> (
 
 def _formatters(
     configuration: config.Config,
-    paths_to_check: list[pathlib.Path],
-    what_to_quiet: tuple[bool, bool],
+    paths_to_check: List[pathlib.Path],
+    what_to_quiet: config.WhatToQuiet,
     task: Literal["format", "check"],
 ) -> None:
     logger.info(f"Running formatters ({task})")
@@ -260,8 +261,8 @@ def _formatters(
 
 def _linters(
     configuration: config.Config,
-    paths_to_check: list[pathlib.Path],
-    what_to_quiet: tuple[bool, bool],
+    paths_to_check: List[pathlib.Path],
+    what_to_quiet: config.WhatToQuiet,
 ) -> None:
     logger.info("Running linters")
     with logger.ctxmgr:
@@ -301,7 +302,7 @@ def main() -> None:
         f"Successfully ran all formatters and linters in {all_timer.time}"
         " seconds with no errors. Good job!"
     )
-    if not what_to_quiet[1]:
+    if not what_to_quiet.pip:
         logger.info(
             "*!*!* HINT: Do you get overwhelmed by pip's output? Consider"
             " using the --quiet-pip argument for Lemming !*!*!"

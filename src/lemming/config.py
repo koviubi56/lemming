@@ -24,7 +24,7 @@ __all__ = [
     "read_config_file_dict",
 ]
 try:
-    import tomllib
+    import tomllib  # novermin
 except Exception:
     import tomli as tomllib
 
@@ -34,10 +34,20 @@ import pathlib
 import shlex
 import subprocess  # noqa: S404
 import sys
-from typing import Any, Generator, TypeVar, cast
+from typing import (
+    Generator,
+    cast,
+    Optional,
+    List,
+    Iterable,
+    Mapping,
+    Dict,
+    MutableSequence,
+)
 
 import pydantic
-from typing_extensions import Self
+
+from typing_extensions import Self, Any, TypeVar, NamedTuple
 
 from . import logger
 
@@ -66,13 +76,20 @@ POTENTIAL_ERRORS = {
 T = TypeVar("T")
 
 
-def assert_dict_keys(dictionary: dict[Any, Any], keys: list[Any]) -> None:
+class WhatToQuiet(NamedTuple):
+    commands: bool
+    pip: bool
+
+
+def assert_dict_keys(
+    dictionary: Iterable[T], keys: MutableSequence[T]
+) -> None:
     """
     Assert that `dictionary`'s keys are in `keys`
 
     Args:
-        dictionary (dict[Any, Any]): The dictionary to check.
-        keys (list[Any]): The keys that are allowed.
+        dictionary (Iterable[Any, Any]): The dictionary to check.
+        keys (MutableSequence[Any]): The keys that are allowed.
 
     Raises:
         ValueError: If a key is found within `dictionary` but not within
@@ -92,7 +109,7 @@ def assert_dict_keys(dictionary: dict[Any, Any], keys: list[Any]) -> None:
             keys.remove(key)
 
 
-def read_toml_file(file: pathlib.Path) -> dict[str, Any]:
+def read_toml_file(file: pathlib.Path) -> Dict[str, Any]:
     """
     Read the toml file `file`.
 
@@ -104,7 +121,7 @@ def read_toml_file(file: pathlib.Path) -> dict[str, Any]:
     """
     logger.debug(f"Reading toml file {file}")
     with file.open("rb") as fd:
-        return cast(dict[str, Any], tomllib.load(fd))  # type: ignore
+        return cast(Dict[str, Any], tomllib.load(fd))  # type: ignore
 
 
 def get_home() -> pathlib.Path:
@@ -118,7 +135,7 @@ def get_home() -> pathlib.Path:
     return pathlib.Path.home()
 
 
-def get_xdg_config_home() -> pathlib.Path | None:
+def get_xdg_config_home() -> Optional[pathlib.Path]:
     """
     Get $XDG_CONFIG_HOME or the default value or None. Return value will
     always be an existing directory (unless None).
@@ -168,7 +185,7 @@ def _get_xdg_config_dirs() -> Generator[pathlib.Path, None, None]:
                     yield path
 
 
-def get_xdg_config_dirs() -> list[pathlib.Path]:
+def get_xdg_config_dirs() -> List[pathlib.Path]:
     """
     Get $XDG_CONFIG_DIRS. Return value will always be a list of existing
     directories.
@@ -277,11 +294,11 @@ class FormatterOrLinter(pydantic.BaseModel):
     An "ABC" for formatters and linters.
 
     Args:
-        packages (list[str]): The packages' name (optionally versions
+        packages (Iterable[str]): The packages' name (optionally versions
         with "==x.y.z") to install with pip.
     """
 
-    packages: list[str]
+    packages: Iterable[str]
 
     @staticmethod
     def get_pyexe() -> str:
@@ -296,7 +313,7 @@ class FormatterOrLinter(pydantic.BaseModel):
     def run_command(
         self,
         cmd: str,
-        paths_to_check: list[pathlib.Path],
+        paths_to_check: Iterable[pathlib.Path],
         quiet: bool,
     ) -> bool:
         """
@@ -308,7 +325,7 @@ class FormatterOrLinter(pydantic.BaseModel):
 
         Args:
             cmd (str): The command to run.
-            paths_to_check (list[pathlib.Path]): The paths to check.
+            paths_to_check (Iterable[pathlib.Path]): The paths to check.
             quiet (bool): Don't let the command write to stdout and stderr
 
         Returns:
@@ -360,30 +377,30 @@ class FormatterOrLinter(pydantic.BaseModel):
 
     def run(
         self,
-        paths_to_check: list[pathlib.Path],
-        what_to_quiet: tuple[bool, bool],
+        paths_to_check: Iterable[pathlib.Path],
+        what_to_quiet: WhatToQuiet,
     ) -> bool:
         raise NotImplementedError
 
 
 class Formatter(FormatterOrLinter):
     format_command: str
-    check_command: str | None = None
+    check_command: Optional[str] = None
     allow_nonzero_on_format: bool = False
 
     def run_format(
         self,
-        paths_to_check: list[pathlib.Path],
-        what_to_quiet: tuple[bool, bool],
+        paths_to_check: Iterable[pathlib.Path],
+        what_to_quiet: WhatToQuiet,
     ) -> bool:
-        if not self.install(what_to_quiet[1]):
+        if not self.install(what_to_quiet.pip):
             logger.error(
                 f"Could not install the packages {self.packages}! See"
                 " pip's output for more information."
             )
             return False
         success = self.run_command(
-            self.format_command, paths_to_check, what_to_quiet[0]
+            self.format_command, paths_to_check, what_to_quiet.commands
         )
         if success or self.allow_nonzero_on_format:
             logger.info(
@@ -401,8 +418,8 @@ class Formatter(FormatterOrLinter):
 
     def run_check(
         self,
-        paths_to_check: list[pathlib.Path],
-        what_to_quiet: tuple[bool, bool],
+        paths_to_check: Iterable[pathlib.Path],
+        what_to_quiet: WhatToQuiet,
     ) -> bool:
         if not self.check_command:
             logger.warning(
@@ -410,14 +427,14 @@ class Formatter(FormatterOrLinter):
                 " Skipping..."
             )
             return True
-        if not self.install(what_to_quiet[1]):
+        if not self.install(what_to_quiet.pip):
             logger.error(
                 f"Could not install the packages {self.packages}! See"
                 " pip's output for more information."
             )
             return False
         success = self.run_command(
-            self.check_command, paths_to_check, what_to_quiet[0]
+            self.check_command, paths_to_check, what_to_quiet.commands
         )
         if success:
             logger.info(f"Successfully ran (check) formatter {self.packages}!")
@@ -432,7 +449,7 @@ class Formatter(FormatterOrLinter):
         return success
 
     @classmethod
-    def from_dict(cls, dict_: dict[str, Any]) -> Self:
+    def from_dict(cls, dict_: Mapping[str, Any]) -> Self:
         assert_dict_keys(
             dict_,
             [
@@ -450,16 +467,16 @@ class Linter(FormatterOrLinter):
 
     def run(
         self,
-        paths_to_check: list[pathlib.Path],
-        what_to_quiet: tuple[bool, bool],
+        paths_to_check: Iterable[pathlib.Path],
+        what_to_quiet: WhatToQuiet,
     ) -> bool:
-        if not self.install(what_to_quiet[1]):
+        if not self.install(what_to_quiet.pip):
             logger.error(
                 f"Could not install linter {self.packages}! See"
                 " pip's output for more information."
             )
         success = self.run_command(
-            self.command, paths_to_check, what_to_quiet[0]
+            self.command, paths_to_check, what_to_quiet.commands
         )
         if success:
             logger.info(f"Successfully ran linter {self.packages}!")
@@ -471,7 +488,7 @@ class Linter(FormatterOrLinter):
         return success
 
     @classmethod
-    def from_dict(cls, dict_: dict[str, Any]) -> Self:
+    def from_dict(cls, dict_: Mapping[str, Any]) -> Self:
         assert_dict_keys(
             dict_,
             [
@@ -483,14 +500,14 @@ class Linter(FormatterOrLinter):
 
 
 class Config(pydantic.BaseModel):
-    formatters: list[Formatter]
-    linters: list[Linter]
+    formatters: Iterable[Formatter]
+    linters: Iterable[Linter]
     # ^ also modify within read_config_file()
 
 
 def read_config_file_dict(
-    read_data: dict[str, Any], file: str = "<unknown file>"
-) -> dict[str, Any]:
+    read_data: Mapping[str, Any], file: str = "<unknown file>"
+) -> Dict[str, Any]:
     try:
         logger.debug('Searching for "lemming" key')
         data = read_data["lemming"]
@@ -517,7 +534,7 @@ def read_config_file_dict(
     return data
 
 
-def read_config_file(dictionary: dict[str, Any]) -> Config:
+def read_config_file(dictionary: Mapping[str, Any]) -> Config:
     logger.debug(f"Making dict {dictionary} a Config() object")
     with logger.ctxmgr:
         assert_dict_keys(dictionary, ["formatters", "linters"])
