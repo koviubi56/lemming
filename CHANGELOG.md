@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2023-02-18
+
+### Added
+
+- **! Added required first positional argument to cli: `task`. Must be `format` or `check`.**
+- Added `Formatter.run_format()` and `Formatter.run_check()`
+- Added `config.WhatToQuiet`
+
+### Changed
+
+- **! `FormatterOrLinter` changed to this: `(*, packages: List[str]) -> None`**
+- **! `Formatter` changed to this: `(*, packages: List[str], format_command: str, check_command: str | None = None, allow_nonzero_on_format: bool = False) -> None`**
+- **! `Linter` changed to this: `(*, packages: List[str], command: str) -> None`**
+- **Made Lemming compatible with 3.8, and made type hints better**
+
+### Removed
+
+- Removed `FormatterOrLinter._run()`
+- Removed the following replace stuff from `FormatterOrLinter.run_command()`:
+  - `{package}` (became `{packages}`),
+  - `{args}`,
+  - `{also_install}`
+- Removed `FormatterOrLinter.get_version()`
+
 ## [0.1.3] - 2022-12-17
 
 ### Added
