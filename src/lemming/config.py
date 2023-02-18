@@ -35,17 +35,17 @@ import shlex
 import subprocess  # noqa: S404
 import sys
 from typing import (
+    Any,
     Dict,
     Generator,
     Iterable,
     List,
     Mapping,
     MutableSequence,
-    Optional,
-    cast,
-    Any,
     NamedTuple,
+    Optional,
     TypeVar,
+    cast,
 )
 
 import pydantic

@@ -24,4 +24,4 @@ jobs:
           python -m pip install --upgrade python-lemming
       - name: Run lemming
         run: |
-          python -m lemming . -v
+          python -m lemming check . -v

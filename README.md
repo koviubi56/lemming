@@ -41,15 +41,14 @@ The config looks like this:
 
 ```toml
 [[lemming.formatters]]
-package = "example"  # REQUIRED, the package to run as `/path/to/python -m <package> <args>`
-version = "1.2.3"  # OPTIONAL, defaults to the latest stable version
-args = "--ignore=joe {path}"  # OPTIONAL, {path} will be replaced by the path passed to Lemming, or the current working directory by default
-allow_nonzero = true  # OPTIONAL, only allowed for formatters. If true, the formatter is allowed to return a non-zero exit status. Defaults to false.
-also_install = ["example-plugin"]  # OPTIONAL, these packages will also be installed
-install_name = "python-example"  # OPTIONAL, the package to install. Defaults to the value of `package`
+packages = ["example"]  # REQUIRED, the package(s) to install with pip (might include versions with "==x.y.z")
+format_command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to format the code ({pyexe} will be replaced with the python executable, {path} with the path passed to Lemming (usually the current working directory: "."))
+check_command = "{pyexe} -m example --check {path}"  # OPTIONAL, the command to run to check the code (stuff will be replaced just like in format_command)
+allow_nonzero_on_format = true  # OPTIONAL, if true it is allowed for the format_command to return a non-zero exit status
 
 [[lemming.linters]]
-# same as for formatters (except for `allow_nonzero`)
+packages = ["example"]  # REQUIRED, same as for formatters
+command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to lint the code (stuff will be replaced just like in format_command)
 ```
 
 ### 2. Run Lemming
@@ -57,27 +56,32 @@ install_name = "python-example"  # OPTIONAL, the package to install. Defaults to
 After [installing](#installation) Lemming, run
 
 ```bash
-lemming .
+lemming {format,check} .
 ```
+
+If you choose format, the `format_command`s will be ran, but if you choose check, the `check_command`s will be ran. Linters will be ran in both cases.
 
 You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lemming.yml).
 
 ## CLI usage
 
 ```text
-usage: lemming [-h] [-v] [-q] [-c CONFIG] [-V] path
+usage: lemming [-h] [-v] [-q] [--quiet-commands] [--quiet-pip] [-c CONFIG] [-V] {format,check} path
 
 Lemming is a tool for formatting and linting code.
 
 positional arguments:
-  path                  the paths (files and directories) to check. these arguments will be passed to the formatters and linters as arguments where {path} is used
+  {format,check}        format the code with the formatters, or check the code with the formatters (linters will be ran in all cases)
+  path                  the paths (files and directories) to check. These arguments will be passed to the formatters and linters as arguments where {path} is used
 
 options:
   -h, --help            show this help message and exit
   -v, --verbose         log more information
-  -q, --quiet           log less information. can be passed multiple times
+  -q, --quiet           log less information. Can be passed multiple times
+  --quiet-commands      don't let ran commands write to stdout and stderr. Use --quiet-pip to quiet `pip`
+  --quiet-pip           don't let pip write to stdout and stderr. Use --quiet-commands to quiet the formatters and linters
   -c CONFIG, --config CONFIG
-                        the config file to use. if passed all other config files will be ignored
+                        the config file to use. If passed all other config files will be ignored
   -V, --version         print the program's version and exit
 ```
 
