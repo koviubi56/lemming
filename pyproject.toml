@@ -8,7 +8,7 @@ profile = "black"
 [[tool.lemming.formatters]]
 packages = ["black"]
 format_command = "{pyexe} -m black -l 79 {path}"
-check_command = "{pyexe} -m black -l 79 --check {path}"
+check_command = "{pyexe} -m black -l 79 --check --extend-exclude .*venv.* {path}"
 
 [[tool.lemming.formatters]]
 packages = ["setup_cfg_fmt"]

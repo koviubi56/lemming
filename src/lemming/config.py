@@ -35,19 +35,21 @@ import shlex
 import subprocess  # noqa: S404
 import sys
 from typing import (
-    Generator,
-    cast,
-    Optional,
-    List,
-    Iterable,
-    Mapping,
     Dict,
+    Generator,
+    Iterable,
+    List,
+    Mapping,
     MutableSequence,
+    Optional,
+    cast,
+    Any,
+    NamedTuple,
+    TypeVar,
 )
 
 import pydantic
-
-from typing_extensions import Self, Any, TypeVar, NamedTuple
+from typing_extensions import Self
 
 from . import logger
 
@@ -294,11 +296,12 @@ class FormatterOrLinter(pydantic.BaseModel):
     An "ABC" for formatters and linters.
 
     Args:
-        packages (Iterable[str]): The packages' name (optionally versions
+        packages (List[str]): The packages' name (optionally versions
         with "==x.y.z") to install with pip.
     """
 
-    packages: Iterable[str]
+    # it's actually Iterable, but that introduces some bugs
+    packages: List[str]
 
     @staticmethod
     def get_pyexe() -> str:
