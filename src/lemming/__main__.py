@@ -157,7 +157,7 @@ def _get_configuration_configprovided(
 
 
 def _get_configuration_confignotprovided() -> config.Config:
-    logger.debug("config_file is None, searching for its")
+    logger.debug("config_file is None, searching for it")
     with logger.ctxmgr:
         # get the config file
         config_file = config.find_config_file(pathlib.Path.cwd()).resolve()

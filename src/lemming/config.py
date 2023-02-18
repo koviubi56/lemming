@@ -47,18 +47,18 @@ CONFIG_FILE_NOT_FOUND_EXC = FileNotFoundError(
     " file, or an [tool.lemming] entry in the pyproject.toml file!"
 )
 POTENTIAL_ERRORS = {
-    "No module named".casefold(): "HINT: It seems like that module doesn't"
+    b"No module named".lower(): "HINT: It seems like that module doesn't"
     " exist with that name. If the module has to be ran with a separate name"
     " than the one that was used to install it, add the `install_name` option"
     " to the config.",
-    "Permission denied: '.'".casefold(): "HINT: It seems like that the"
+    b"Permission denied: '.'".lower(): "HINT: It seems like that the"
     " formatter/linter expects a file as an argument, and not a directory."
     " Lemming by default doesn't pass anything to the formatter/linter as"
     " arguments. You can add arguments with the `args` config key. You can"
     " also use `{path}` in the `args` config key, which will be replaced with"
     " the path that was passed to Lemming, or the current working directory by"
     " default.",
-    "Usage:".casefold(): "HINT: It seems like that the formatter/linter"
+    b"Usage:".lower(): "HINT: It seems like that the formatter/linter"
     " expects arguments. You can pass the `args` config key to do that. Note,"
     " that `{path}` in the `args` config key will be replaced by the path that"
     " was passed to Lemming, or the current working directory by default.",
@@ -363,6 +363,11 @@ class FormatterOrLinter(pydantic.BaseModel):
         logger.error(
             f"Command {cmd!r} returned non-zero exit status {exit_status}"
         )
+        if completed_process.stdout:
+            stdout = completed_process.stderr.lower()
+            for look_for, suggestion in POTENTIAL_ERRORS.items():
+                if look_for in stdout:
+                    logger.error(suggestion)
         return False
 
     def install(self, quiet: bool) -> bool:
