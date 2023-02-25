@@ -49,6 +49,7 @@ allow_nonzero_on_format = true  # OPTIONAL, if true it is allowed for the format
 [[lemming.linters]]
 packages = ["example"]  # REQUIRED, same as for formatters
 command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to lint the code (stuff will be replaced just like in format_command)
+run_first = true  # OPTIONAL, if true this linter will be ran BEFORE formatters, and linters with this being false. Defaults to false.
 ```
 
 ### 2. Run Lemming

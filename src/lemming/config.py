@@ -467,6 +467,7 @@ class Formatter(FormatterOrLinter):
 
 class Linter(FormatterOrLinter):
     command: str
+    run_first: bool = False
 
     def run(
         self,
@@ -506,6 +507,12 @@ class Config(pydantic.BaseModel):
     formatters: Iterable[Formatter]
     linters: Iterable[Linter]
     # ^ also modify within read_config_file()
+
+    def get_first_linters(self) -> List[Linter]:
+        return [linter for linter in self.linters if linter.run_first]
+
+    def get_other_linters(self) -> List[Linter]:
+        return [linter for linter in self.linters if not linter.run_first]
 
 
 def read_config_file_dict(

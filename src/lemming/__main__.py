@@ -259,28 +259,50 @@ def _formatters(
         logger.info(f"Ran all formatters in {formatters_timer.time} seconds")
 
 
-def _linters(
+def _run_linter(
+    paths_to_check: List[pathlib.Path],
+    what_to_quiet: config.WhatToQuiet,
+    linter: config.Linter,
+) -> None:
+    with logger.ctxmgr:
+        with Timer() as linter_timer:
+            success = linter.run(paths_to_check, what_to_quiet)
+            if not success:
+                logger.error(
+                    f"Could not run linter {linter.packages}!"
+                    " Please see the linter's output for more"
+                    " details."
+                )
+                PARSER.exit(1, "\nFAILED!\n")
+        logger.info(f"Ran linter in {linter_timer.time} seconds")
+
+
+def _linters_first(
     configuration: config.Config,
     paths_to_check: List[pathlib.Path],
     what_to_quiet: config.WhatToQuiet,
 ) -> None:
-    logger.info("Running linters")
+    logger.info("Running (first) linters")
     with logger.ctxmgr:
         with Timer() as linters_timer:
-            for linter in configuration.linters:
-                logger.info(f"Running linter {linter.packages}")
-                with logger.ctxmgr:
-                    with Timer() as linter_timer:
-                        success = linter.run(paths_to_check, what_to_quiet)
-                        if not success:
-                            logger.error(
-                                f"Could not run linter {linter.packages}!"
-                                " Please see the linter's output for more"
-                                " details."
-                            )
-                            PARSER.exit(1, "\nFAILED!\n")
-                    logger.info(f"Ran linter in {linter_timer.time} seconds")
-        logger.info(f"Ran all linters in {linters_timer.time} seconds")
+            for linter in configuration.get_first_linters():
+                logger.info(f"Running (first) linter {linter.packages}")
+                _run_linter(paths_to_check, what_to_quiet, linter)
+        logger.info(f"Ran all (first) linters in {linters_timer.time} seconds")
+
+
+def _linters_other(
+    configuration: config.Config,
+    paths_to_check: List[pathlib.Path],
+    what_to_quiet: config.WhatToQuiet,
+) -> None:
+    logger.info("Running (other) linters")
+    with logger.ctxmgr:
+        with Timer() as linters_timer:
+            for linter in configuration.get_other_linters():
+                logger.info(f"Running (other) linter {linter.packages}")
+                _run_linter(paths_to_check, what_to_quiet, linter)
+        logger.info(f"Ran all (other) linters in {linters_timer.time} seconds")
 
 
 def main() -> None:
@@ -294,9 +316,11 @@ def main() -> None:
             ) = get_configuration()
         logger.debug(f"Got configuration in {config_timer.time} seconds")
 
+        _linters_first(configuration, paths_to_check, what_to_quiet)
+
         _formatters(configuration, paths_to_check, what_to_quiet, task)
 
-        _linters(configuration, paths_to_check, what_to_quiet)
+        _linters_other(configuration, paths_to_check, what_to_quiet)
 
     logger.info(
         f"Successfully ran all formatters and linters in {all_timer.time}"
