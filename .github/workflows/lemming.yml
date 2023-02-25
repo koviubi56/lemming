@@ -20,8 +20,10 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install Lemming
+        # ! Hey! If you're copy-pasting this file, then choose the the commented out command
         run: |
-          python -m pip install --upgrade python-lemming
+          python -m pip install "git+https://github.com/koviubi56/lemming.git"
+        # python -m pip install -U python-lemming
       - name: Run lemming
         run: |
           python -m lemming check . -v
