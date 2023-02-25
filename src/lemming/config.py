@@ -25,7 +25,7 @@ __all__ = [
 ]
 try:
     import tomllib  # novermin
-except Exception:
+except Exception:  # noqa: BLE001
     import tomli as tomllib
 
 import contextlib
@@ -495,10 +495,7 @@ class Linter(FormatterOrLinter):
     def from_dict(cls, dict_: Mapping[str, Any]) -> Self:
         assert_dict_keys(
             dict_,
-            [
-                "packages",
-                "command",
-            ],
+            ["packages", "command", "run_first"],
         )
         return cls(**dict_)
 

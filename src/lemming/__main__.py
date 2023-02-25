@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import pathlib
 import time
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 
 import mylog
-from typing_extensions import Literal, Self
+from typing_extensions import Self
 
 from . import __version__, config, logger
 
@@ -94,7 +94,7 @@ class Timer:
         self.start = time.perf_counter()
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *_: object) -> None:
         assert self.start  # noqa: S101
         self.time = time.perf_counter() - self.start
 
@@ -196,7 +196,7 @@ def _get_configuration(args: argparse.Namespace) -> config.Config:
     else:
         configuration = _get_configuration_confignotprovided()
 
-    return configuration
+    return configuration  # noqa: RET504
 
 
 def get_configuration() -> (
