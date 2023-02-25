@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2023-02-25
+
 ## Added
 
 - **! Added _first_ linters, which will be ran _before_ formatters. Enable them with `run_first=true` in the linter's config.**
