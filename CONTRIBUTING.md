@@ -17,7 +17,6 @@ Lemming is an open source project and we love to receive contributions from our 
 - Fill issue templates.
 - If you are making a big pull request, create an issue first.
 - Read the [code of conduct](CODE_OF_CONDUCT.md).
-- Run tests. _[Need more help?](#run-tests)_
 - Search open **and closed** issues **and** pull requests.
 - Please, **don't** open an issue for questions. Ask it in the discussions tab!
 - Make sure to put an X to the square brackets at the end of the issue, if you read the contributing guidelines, and the code of conduct. **If you don't put an X into all of them, your issue will be closed!**
@@ -61,9 +60,7 @@ Lemming is an open source project and we love to receive contributions from our 
 1. Click on the green `Submit new issue` button.
 1. Done! You now have to wait for the issue to be resolved. It's important, that you don't forget about the issue.
 
-## How to set up your environment and run tests?
-
-### Set up environment
+## How to set up your environment?
 
 1. Clone the GitHub repository using `git clone`. _[Need more help?](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)_
 1. Create a virtual environment using `venv venv`. _[Need more help?](https://packaging.python.org/en/latest/tutorials/installing-packages/#creating-virtual-environments)_
@@ -75,12 +72,6 @@ Lemming is an open source project and we love to receive contributions from our 
 ### Install dependencies
 
 Run `pip install -Ur requirements.txt`. _[Need more help?](https://packaging.python.org/en/latest/tutorials/installing-packages/#requirements-files)_
-
-### Run tests
-
-1. Install pytest with `pip install pytest` _[Need more help?](https://docs.pytest.org/en/7.1.x/getting-started.html#install-pytest)_
-1. _Recommended:_ Install pytest-randomly with `pip install pytest-randomly`
-1. Run `pytest --doctest-modules`. _[Need more help?](https://docs.pytest.org/en/7.1.x/how-to/usage.html#usage)_
 
 ## Pull requests
 
