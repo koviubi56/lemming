@@ -17,48 +17,53 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 # SPDX-License-Identifier: GPL-3.0-or-later
-__all__ = [
-    "read_toml_file",
-    "read_config_file",
-    "find_config_file",
-    "read_config_file_dict",
-]
-try:
-    import tomllib  # novermin
-except Exception:  # noqa: BLE001
-    import tomli as tomllib
-
-import contextlib
+# TODO: fail fast turn on/off
 import os
 import pathlib
 import shlex
 import subprocess  # noqa: S404
 import sys
 from typing import (
-    Any,
-    Dict,
-    Generator,
+    AnyStr,
     Iterable,
     List,
     Mapping,
     MutableSequence,
-    NamedTuple,
     Optional,
-    TypeVar,
-    cast,
+    Protocol,
+    Union,
 )
 
-import pydantic
-from typing_extensions import Self
+from confz import ConfZ, ConfZFileSource
+from confz.exceptions import ConfZFileException
+from typing_extensions import NamedTuple, Self, TypeAlias, TypeVar
 
 from . import logger
+
+try:
+    import tomllib  # novermin
+except Exception:  # noqa: BLE001
+    import tomli as tomllib
 
 CONFIG_FILE_NAME = ".lemming.toml"
 CONFIG_FILE_NOT_FOUND_EXC = FileNotFoundError(
     f"No config file was found. Please provide a {CONFIG_FILE_NAME}"
     " file, or an [tool.lemming] entry in the pyproject.toml file!"
 )
+CONFIG_HAS_NO_LEMMING_STUFF = ValueError(
+    "The found pyproject.toml file has no tool.lemming key!"
+    # we don't actually check for "tool.lemming" key.
+    # we search for config["tool"]["lemming"]
+)
 T = TypeVar("T")
+
+
+class _PathLike(Protocol):
+    def __fspath__(self) -> AnyStr:
+        ...
+
+
+PathLike: TypeAlias = Union[_PathLike, AnyStr]
 
 
 class WhatToQuiet(NamedTuple):
@@ -94,189 +99,9 @@ def assert_dict_keys(
             keys.remove(key)
 
 
-def read_toml_file(file: pathlib.Path) -> Dict[str, Any]:
+class FormatterOrLinter(ConfZ):
     """
-    Read the toml file `file`.
-
-    Args:
-        file (pathlib.Path): The toml file to read.
-
-    Returns:
-        dict[str, Any]: The read data
-    """
-    logger.debug(f"Reading toml file {file}")
-    with file.open("rb") as fd:
-        return cast(Dict[str, Any], tomllib.load(fd))  # type: ignore
-
-
-def get_home() -> pathlib.Path:
-    """
-    Get $HOME.
-
-    Returns:
-        pathlib.Path: $HOME.
-    """
-    logger.debug("Getting $HOME")
-    return pathlib.Path.home()
-
-
-def get_xdg_config_home() -> Optional[pathlib.Path]:
-    """
-    Get $XDG_CONFIG_HOME or the default value or None. Return value will
-    always be an existing directory (unless None).
-
-    Returns:
-        pathlib.Path | None: $XDG_CONFIG_HOME or the default value
-        ($HOME/.config) or None
-    """
-    logger.debug("Getting $XDG_CONFIG_HOME")
-    env_value = os.environ.get("XDG_CONFIG_HOME", "")
-    logger.debug(f"$XDG_CONFIG_HOME={env_value!r}")
-    if env_value.strip():
-        rv = pathlib.Path(env_value)
-        logger.debug(f"Path is {rv!r}")
-        if rv.exists() and rv.is_dir():
-            logger.debug("It's an existing directory, returning")
-            return rv
-        logger.debug("It isn't an existing directory, going with default")
-    rv = get_home() / ".config"
-    if rv.exists() and rv.is_dir():
-        logger.debug("It's an existing directory, returning")
-        return rv
-    logger.debug("It isn't an existing directory, returning None")
-    return None
-
-
-def _xdg_config_dirs() -> str:
-    logger.debug("Getting $XDG_CONFIG_DIRS (_xdg_config_dirs)")
-    env_value = os.environ.get("XDG_CONFIG_DIRS", "")
-    logger.debug(f"$XDG_CONFIG_DIRS={env_value}")
-    return env_value if env_value.strip() else "/etc/xdg"
-
-
-def _get_xdg_config_dirs() -> Generator[pathlib.Path, None, None]:
-    logger.debug("Getting $XDG_CONFIG_DIRS (_get_xdg_config_dirs)")
-    envvar = _xdg_config_dirs()
-    logger.debug(f"$XDG_CONFIG_DIRS is {envvar}, splitting and iterating")
-    with logger.ctxmgr:
-        for part in envvar.split(":"):
-            logger.debug(f"{part = !r}")
-            with logger.ctxmgr:
-                if not part.strip():
-                    logger.debug("Empty, skip")
-                    continue
-                path = pathlib.Path(part)
-                if path.exists() and path.is_dir():
-                    yield path
-
-
-def get_xdg_config_dirs() -> List[pathlib.Path]:
-    """
-    Get $XDG_CONFIG_DIRS. Return value will always be a list of existing
-    directories.
-
-    Returns:
-        list[pathlib.Path]: $XDG_CONFIG_DIRS.
-    """
-    logger.debug("Getting $XDG_CONFIG_DIRS (get_xdg_config_dirs)")
-    return list(_get_xdg_config_dirs())
-
-
-def find_config_file(
-    dir_: pathlib.Path,
-    allow_recursion: bool = True,
-    *,
-    from_recursion: bool = False,
-) -> pathlib.Path:
-    """
-    Find the config file.
-
-    Args:
-        dir (pathlib.Path): The directory to search in.
-        allow_recursion (bool, optional): Allow recursion in parent
-        directories. Defaults to True.
-        from_recursion (bool, optional): True if this function is called by
-        this function. Don't mess with this! Defaults to False.
-
-    Raises:
-        FileNotFoundError: If the config file wasn't found (even in parent
-        directories)
-
-    Returns:
-        pathlib.Path: The config file
-    """
-    logger.debug(
-        f"Finding config file ({dir_=!r}, {allow_recursion=!r},"
-        f" {from_recursion=!r})"
-    )
-    # * check current directory
-    if (file := (dir_ / CONFIG_FILE_NAME)).exists():
-        logger.debug(
-            f"{file} (current dir / {CONFIG_FILE_NAME}) exists, returning"
-        )
-        return file
-    # * check .github directory
-    if (gh := (dir_ / ".github")).exists() and (
-        file := (gh / CONFIG_FILE_NAME)
-    ).exists():
-        logger.debug(
-            f"{file} (current dir / .github / {CONFIG_FILE_NAME}) exists,"
-            " returning"
-        )
-        return file
-    # * check pyproject.toml
-    if (file := (dir_ / "pyproject.toml")).exists():
-        logger.debug(
-            f"{file} (current dir / pyproject.toml) exists, returning"
-        )
-        return file
-    # * check XDG_CONFIG_DIRS
-    if not from_recursion:
-        logger.debug("Not from recursion, checking $XDG_CONFIG_DIRS")
-        with logger.ctxmgr:
-            for directory in get_xdg_config_dirs():
-                logger.debug(f"{directory = !r}")
-                with contextlib.suppress(CONFIG_FILE_NOT_FOUND_EXC.__class__):
-                    logger.debug(
-                        f"Calling ourselves on {directory}, recursion!"
-                    )
-                    with logger.ctxmgr:
-                        return find_config_file(
-                            directory,
-                            allow_recursion=False,
-                            from_recursion=True,
-                        )
-    # * check XDG_CONFIG_HOME
-    if (
-        (not from_recursion)
-        and (xdg_config_home := get_xdg_config_home())
-        and (file := (xdg_config_home / CONFIG_FILE_NAME)).exists()
-    ):
-        logger.debug(
-            f"{file} ($XDF_CONFIG_HOME / {CONFIG_FILE_NAME}) exists, returning"
-        )
-        return file
-    # * recursion with parent directory
-    if allow_recursion:
-        parent = dir_.parent
-        logger.debug(f"Nothing found, recursion with parent ({parent})")
-        with logger.ctxmgr:
-            if parent == dir_:
-                logger.error(
-                    "No more parent directories; config file is nowhere to be"
-                    " found!"
-                )
-                raise CONFIG_FILE_NOT_FOUND_EXC
-            return find_config_file(parent, from_recursion=True)
-    logger.error(
-        "Config file is nowhere to be found! (NOTE: allow_recursion is False)"
-    )
-    raise CONFIG_FILE_NOT_FOUND_EXC
-
-
-class FormatterOrLinter(pydantic.BaseModel):
-    """
-    An "ABC" for formatters and linters.
+    An ABC for formatters and linters.
 
     Args:
         packages (List[str]): The packages' name (optionally versions
@@ -286,57 +111,73 @@ class FormatterOrLinter(pydantic.BaseModel):
     # it's actually Iterable, but that introduces some bugs
     packages: List[str]
 
-    @staticmethod
-    def get_pyexe() -> str:
-        """
-        The python executable.
+    def replace_command(
+        self,
+        command: str,
+        paths_to_check: Iterable[pathlib.Path],
+    ) -> str:
+        r"""
+        Return the command with {pyexe}, {path}, and {packages} being replaced.
+
+        | Old        | New              |
+        | ---------- | ---------------- |
+        | {pyexe}    | sys.executable   |
+        | {path}     | paths_to_check\* |
+        | {packages} | self.packages\*  |
+
+        \*: `" ".join()` will be used
+
+        Args:
+            command (str): The command.
+            paths_to_check (Iterable[pathlib.Path]): Paths to check.
 
         Returns:
-            str: sys.executable
+            str: The new command.
         """
-        return sys.executable
+        return (
+            command.strip()
+            .replace("{pyexe}", sys.executable)
+            .replace("{path}", " ".join(map(str, paths_to_check)))
+            .replace("{packages}", " ".join(self.packages))
+        )
 
     def run_command(
         self,
-        cmd: str,
+        command: str,
         paths_to_check: Iterable[pathlib.Path],
         quiet: bool,
     ) -> bool:
         """
-        Run command `cmd`.
+        Run command `command`.
         Also replaces these:
         - `{pyexe}` -> `sys.executable`
 
         In `self.args` `{path}` be replaced by `paths_to_check`.
 
         Args:
-            cmd (str): The command to run.
+            command (str): The command to run.
             paths_to_check (Iterable[pathlib.Path]): The paths to check.
             quiet (bool): Don't let the command write to stdout and stderr
 
         Returns:
             bool: `exit_status == 0`
         """
-        cmd = cmd.strip()
-        cmd = cmd.replace("{pyexe}", sys.executable)
-        paths = " ".join(map(str, paths_to_check))
-        cmd = cmd.replace("{path}", paths)
-        packages = " ".join(self.packages)
-        cmd = cmd.replace("{packages}", packages)
+        command = self.replace_command(command, paths_to_check)
 
-        splitted = shlex.split(cmd, posix=os.name != "nt")
+        splitted = shlex.split(command, posix=os.name != "nt")
         logger.debug(f"Running command {splitted!r}")
         completed_process = subprocess.run(  # noqa: S603
             splitted,
             check=False,
             capture_output=quiet,
+            shell=False,
         )
         exit_status = completed_process.returncode
         if exit_status == 0:
-            logger.info(f"Successfully ran command {cmd!r}")
+            logger.info(f"Successfully ran command {command!r}")
             return True
         logger.error(
-            f"Command {cmd!r} returned non-zero exit status {exit_status}"
+            f"Command {command!r} returned non-zero exit status {exit_status}"
         )
         return False
 
@@ -356,13 +197,6 @@ class FormatterOrLinter(pydantic.BaseModel):
                 "{pyexe} -m pip install -U {packages}", [], quiet
             )
 
-    def run(
-        self,
-        paths_to_check: Iterable[pathlib.Path],
-        what_to_quiet: WhatToQuiet,
-    ) -> bool:
-        raise NotImplementedError
-
 
 class Formatter(FormatterOrLinter):
     format_command: str
@@ -374,12 +208,14 @@ class Formatter(FormatterOrLinter):
         paths_to_check: Iterable[pathlib.Path],
         what_to_quiet: WhatToQuiet,
     ) -> bool:
-        if not self.install(what_to_quiet.pip):
+        install_success = self.install(what_to_quiet.pip)
+        if not install_success:
             logger.error(
                 f"Could not install the packages {self.packages}! See"
                 " pip's output for more information."
             )
             return False
+
         success = self.run_command(
             self.format_command, paths_to_check, what_to_quiet.commands
         )
@@ -408,12 +244,15 @@ class Formatter(FormatterOrLinter):
                 " Skipping..."
             )
             return True
-        if not self.install(what_to_quiet.pip):
+
+        install_success = self.install(what_to_quiet.pip)
+        if not install_success:
             logger.error(
                 f"Could not install the packages {self.packages}! See"
                 " pip's output for more information."
             )
             return False
+
         success = self.run_command(
             self.check_command, paths_to_check, what_to_quiet.commands
         )
@@ -430,7 +269,7 @@ class Formatter(FormatterOrLinter):
         return success
 
     @classmethod
-    def from_dict(cls, dict_: Mapping[str, Any]) -> Self:
+    def from_dict(cls, dict_: Mapping[str, Union[str, bool]]) -> Self:
         assert_dict_keys(
             dict_,
             [
@@ -452,11 +291,13 @@ class Linter(FormatterOrLinter):
         paths_to_check: Iterable[pathlib.Path],
         what_to_quiet: WhatToQuiet,
     ) -> bool:
-        if not self.install(what_to_quiet.pip):
+        install_success = self.install(what_to_quiet.pip)
+        if not install_success:
             logger.error(
                 f"Could not install linter {self.packages}! See"
                 " pip's output for more information."
             )
+
         success = self.run_command(
             self.command, paths_to_check, what_to_quiet.commands
         )
@@ -470,7 +311,7 @@ class Linter(FormatterOrLinter):
         return success
 
     @classmethod
-    def from_dict(cls, dict_: Mapping[str, Any]) -> Self:
+    def from_dict(cls, dict_: Mapping[str, Union[str, bool]]) -> Self:
         assert_dict_keys(
             dict_,
             ["packages", "command", "run_first"],
@@ -478,9 +319,9 @@ class Linter(FormatterOrLinter):
         return cls(**dict_)
 
 
-class Config(pydantic.BaseModel):
-    formatters: Iterable[Formatter]
-    linters: Iterable[Linter]
+class Config(ConfZ):
+    formatters: List[Formatter]
+    linters: List[Linter]
     # ^ also modify within read_config_file()
 
     def get_first_linters(self) -> List[Linter]:
@@ -490,50 +331,31 @@ class Config(pydantic.BaseModel):
         return [linter for linter in self.linters if not linter.run_first]
 
 
-def read_config_file_dict(
-    read_data: Mapping[str, Any], file: str = "<unknown file>"
-) -> Dict[str, Any]:
+def get_config_dot_lemming(folder: pathlib.Path) -> Config:
+    return Config(ConfZFileSource(file=".lemming.toml", folder=folder))
+
+
+def get_config_pyproject(pyproject: pathlib.Path) -> Config:
+    config_text = pyproject.read_text(encoding="utf-8")
+    pyproject_config = tomllib.loads(config_text)
     try:
-        logger.debug('Searching for "lemming" key')
-        data = read_data["lemming"]
-    except KeyError:
-        try:
-            logger.debug('Not found, searching for "tool.lemming" key')
-            data = read_data["tool"]["lemming"]
-        except KeyError as exc:
-            logger.error(
-                'Neither "lemming" nor "tool.lemming" was found within the'
-                f" config file ({file})!"
-            )
-            exc_ = ValueError(
-                f'invalid config file {file}: doesn\'t have key "lemming" or'
-                ' "tool.lemming"'
-            )
-            exc_.add_note(
-                "NOTE: The config file isn't what you expected it to be? Check"
-                " your .github directory, $XDG_CONFIG_HOME and"
-                " $XDG_CONFIG_DIRS environment variables, and the parent"
-                " directories."
-            )
-            raise exc_ from exc
-    return data
+        lemming_config = pyproject_config["tool"]["lemming"]
+    except KeyError as exception:
+        raise CONFIG_HAS_NO_LEMMING_STUFF from exception
+    return Config(**lemming_config)
 
 
-def read_config_file(dictionary: Mapping[str, Any]) -> Config:
-    logger.debug(f"Making dict {dictionary} a Config() object")
-    with logger.ctxmgr:
-        assert_dict_keys(dictionary, ["formatters", "linters"])
-        logger.debug(f'Making formatters ({dictionary.get("formatters", [])})')
-        formatters = [
-            Formatter.from_dict(dict_)
-            for dict_ in dictionary.get("formatters", [])
-        ]
-        logger.debug(f'Making linters ({dictionary.get("linters", [])})')
-        linters = [
-            Linter.from_dict(dict_) for dict_ in dictionary.get("linters", [])
-        ]
-        logger.debug(f"And making the Config({formatters=!r}, {linters=!r})")
-        return Config(
-            formatters=formatters,
-            linters=linters,
-        )
+def get_config(folder: PathLike) -> None:
+    folder = pathlib.Path(folder)
+    try:
+        # try .lemming.toml
+        return get_config_dot_lemming(folder)
+    except ConfZFileException:
+        # try pyproject.toml
+        pyproject = folder / "pyproject.toml"
+        if not pyproject.exists():
+            # recursion... recursion recursion...
+            if folder.parent == folder:
+                raise CONFIG_FILE_NOT_FOUND_EXC from None
+            return get_config(folder.parent)
+        return get_config_pyproject(pyproject)

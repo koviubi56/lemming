@@ -23,6 +23,7 @@ import time
 from typing import List, Literal, Tuple
 
 import mylog
+from confz import ConfZFileSource
 from typing_extensions import Self
 
 from . import __version__, config, logger
@@ -155,36 +156,12 @@ def _get_configuration_configprovided(
     config_file: pathlib.Path,
 ) -> config.Config:
     logger.debug("config_file is provided, using that")
-    with logger.ctxmgr:
-        dict_ = config.read_toml_file(config_file)
-        logger.debug(f"{dict_ = !r}")
-        configuration = config.read_config_file(dict_)
-        logger.debug(f"{configuration = !r}")
-    return configuration
+    return config.Config(ConfZFileSource(file=config_file))
 
 
 def _get_configuration_confignotprovided() -> config.Config:
     logger.debug("config_file is None, searching for it")
-    with logger.ctxmgr:
-        # get the config file
-        config_file = config.find_config_file(pathlib.Path.cwd()).resolve()
-        logger.debug(f"{config_file = !r}")
-
-        # read the config file
-        read_data = config.read_toml_file(config_file)
-        logger.debug(f"{read_data = !r}")
-
-        # get our part out of the config file
-        dict_ = config.read_config_file_dict(
-            read_data,
-            str(config_file),
-        )
-        logger.debug(f"{dict_ = !r}")
-
-        # convert our part out of the config file to Config()
-        configuration = config.read_config_file(dict_)
-        logger.debug(f"{configuration = !r}")
-    return configuration
+    return config.get_config(".")
 
 
 def _get_configuration(args: argparse.Namespace) -> config.Config:
@@ -192,11 +169,8 @@ def _get_configuration(args: argparse.Namespace) -> config.Config:
     config_file = _get_config_file(args)
 
     if config_file:
-        configuration = _get_configuration_configprovided(config_file)
-    else:
-        configuration = _get_configuration_confignotprovided()
-
-    return configuration  # noqa: RET504
+        return _get_configuration_configprovided(config_file)
+    return _get_configuration_confignotprovided()
 
 
 def get_configuration() -> (
