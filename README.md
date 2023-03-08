@@ -30,10 +30,8 @@ Lemming requires Python 3.8
 
 Lemming's config lives in these places:
 
-- in the `.lemming.toml` file,
-- in the `.github/.lemming.toml` file,
-- in the `pyproject.toml` file,
-- all of the above files in the parent directories, and in `$XDG_CONFIG_HOME`, and in `$XDG_CONFIG_DIRS`.
+- in the `.lemming.toml` file
+- in the `pyproject.toml` file
 
 Please note, that there must be a `lemming` or `tool.lemming` key in the config file.
 
