@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 # SPDX-License-Identifier: GPL-3.0-or-later
-# TODO: fail fast turn on/off
 import os
 import pathlib
 import shlex
@@ -323,6 +322,7 @@ class Config(ConfZ):
     formatters: List[Formatter]
     linters: List[Linter]
     # ^ also modify within read_config_file()
+    fail_fast: bool = True
 
     def get_first_linters(self) -> List[Linter]:
         return [linter for linter in self.linters if linter.run_first]

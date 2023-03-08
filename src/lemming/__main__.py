@@ -202,7 +202,7 @@ def _formatters(
     paths_to_check: List[pathlib.Path],
     what_to_quiet: config.WhatToQuiet,
     task: Literal["format", "check"],
-) -> None:
+) -> bool:
     logger.info(f"Running formatters ({task})")
     with logger.ctxmgr:
         with Timer() as formatters_timer:
@@ -226,18 +226,23 @@ def _formatters(
                                 "Could not run formatter"
                                 f" {formatter.packages}!"
                             )
-                            PARSER.exit(1, "\nFAILED!\n")
+                            if configuration.fail_fast:
+                                PARSER.exit(1, "\nFAILED!\n")
+                            else:
+                                return False
                     logger.info(
                         f"Ran formatter in {formatter_timer.time} seconds"
                     )
         logger.info(f"Ran all formatters in {formatters_timer.time} seconds")
+        return True
 
 
 def _run_linter(
+    configuration: config.Config,
     paths_to_check: List[pathlib.Path],
     what_to_quiet: config.WhatToQuiet,
     linter: config.Linter,
-) -> None:
+) -> bool:
     with logger.ctxmgr:
         with Timer() as linter_timer:
             success = linter.run(paths_to_check, what_to_quiet)
@@ -247,22 +252,32 @@ def _run_linter(
                     " Please see the linter's output for more"
                     " details."
                 )
-                PARSER.exit(1, "\nFAILED!\n")
+                if configuration.fail_fast:
+                    PARSER.exit(1, "\nFAILED!\n")
+                else:
+                    return False
         logger.info(f"Ran linter in {linter_timer.time} seconds")
+        return True
 
 
 def _linters_first(
     configuration: config.Config,
     paths_to_check: List[pathlib.Path],
     what_to_quiet: config.WhatToQuiet,
-) -> None:
+) -> bool:
     logger.info("Running (first) linters")
+    return_value = True
     with logger.ctxmgr:
         with Timer() as linters_timer:
             for linter in configuration.get_first_linters():
                 logger.info(f"Running (first) linter {linter.packages}")
-                _run_linter(paths_to_check, what_to_quiet, linter)
+                success = _run_linter(
+                    configuration, paths_to_check, what_to_quiet, linter
+                )
+                if not success:
+                    return_value = False
         logger.info(f"Ran all (first) linters in {linters_timer.time} seconds")
+        return return_value
 
 
 def _linters_other(
@@ -271,12 +286,18 @@ def _linters_other(
     what_to_quiet: config.WhatToQuiet,
 ) -> None:
     logger.info("Running (other) linters")
+    return_value = True
     with logger.ctxmgr:
         with Timer() as linters_timer:
             for linter in configuration.get_other_linters():
                 logger.info(f"Running (other) linter {linter.packages}")
-                _run_linter(paths_to_check, what_to_quiet, linter)
+                success = _run_linter(
+                    configuration, paths_to_check, what_to_quiet, linter
+                )
+                if not success:
+                    return_value = False
         logger.info(f"Ran all (other) linters in {linters_timer.time} seconds")
+        return return_value
 
 
 def main() -> None:
@@ -288,13 +309,30 @@ def main() -> None:
                 what_to_quiet,
                 task,
             ) = get_configuration()
-        logger.debug(f"Got configuration in {config_timer.time} seconds")
+        logger.debug(
+            f"Got configuration {configuration} in {config_timer.time} seconds"
+        )
 
-        _linters_first(configuration, paths_to_check, what_to_quiet)
+        linter_first_success = _linters_first(
+            configuration, paths_to_check, what_to_quiet
+        )
 
-        _formatters(configuration, paths_to_check, what_to_quiet, task)
+        formatter_success = _formatters(
+            configuration, paths_to_check, what_to_quiet, task
+        )
 
-        _linters_other(configuration, paths_to_check, what_to_quiet)
+        linter_other_success = _linters_other(
+            configuration, paths_to_check, what_to_quiet
+        )
+
+        if not all(
+            (linter_first_success, formatter_success, linter_other_success)
+        ):
+            logger.error(
+                "Failed, due to one or more linters/formatters failing."
+            )
+            logger.error("HINT: Set fail_fast=true to disable this behavior")
+            PARSER.exit(1, "\nFAILED\n")
 
     logger.info(
         f"Successfully ran all formatters and linters in {all_timer.time}"

@@ -40,6 +40,8 @@ Please note, that there must be a `lemming` or `tool.lemming` key in the config 
 The config looks like this:
 
 ```toml
+fail_fast = false  # OPTIONAL, wheter or not immediately quit in case of an error
+
 [[lemming.formatters]]
 packages = ["example"]  # REQUIRED, the package(s) to install with pip (might include versions with "==x.y.z")
 format_command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to format the code ({pyexe} will be replaced with the python executable, {path} with the path passed to Lemming (usually the current working directory: "."))
