@@ -6,10 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2023-03-28
+
 ## Added
 
 - **! Added `confz` as a dependency!**
 - Added `fail_fast` to config
+
+## Fixed
+
+- **Now supports mylog`>=0.7.0`**
 
 ## [0.3.0] - 2023-02-25
 
