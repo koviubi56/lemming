@@ -1,3 +1,5 @@
 tomli; python_version<'3.11'
 python-mylog>=0.7.0
 confz
+typing-extensions>=4.4.0
+
