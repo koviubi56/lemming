@@ -319,8 +319,9 @@ class Linter(FormatterOrLinter):
 
 
 class Config(ConfZ):
-    formatters: List[Formatter]
-    linters: List[Linter]
+    # we should be safe with mutable default arguments
+    formatters: List[Formatter] = []
+    linters: List[Linter] = []
     # ^ also modify within read_config_file()
     fail_fast: bool = True
 
