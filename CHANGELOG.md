@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## Fixed
+
+- **! Fixed issue with only having `formatters` (x)or `linters`**
+- **Added `typing_extensions` as a dependency. It was a dependency before that, but we didn't declare it as one.**
+
 ## [0.4.0] - 2023-03-28
 
 ## Added
