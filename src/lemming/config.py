@@ -165,11 +165,11 @@ class FormatterOrLinter(ConfZ):
 
         splitted = shlex.split(command, posix=os.name != "nt")
         logger.debug(f"Running command {splitted!r}")
-        completed_process = subprocess.run(  # noqa: S603
+        completed_process = subprocess.run(
             splitted,
             check=False,
             capture_output=quiet,
-            shell=False,
+            shell=False,  # noqa: S603
         )
         exit_status = completed_process.returncode
         if exit_status == 0:
