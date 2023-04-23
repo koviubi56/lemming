@@ -9,9 +9,22 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
-
+    assignees:
+      - "koviubi56"
+    reviewers:
+      - "koviubi56"
+    commit-message:
+      prefix: ":arrow_up: "
 
   - package-ecosystem: pip
     directory: /
     schedule:
       interval: weekly
+    assignees:
+      - "koviubi56"
+    reviewers:
+      - "koviubi56"
+    commit-message:
+      prefix: ":arrow_up: "
+
+
