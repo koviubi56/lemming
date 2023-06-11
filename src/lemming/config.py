@@ -20,16 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import pathlib
 import shlex
-import subprocess  # noqa: S404
+import subprocess
 import sys
-from typing import (
-    Iterable,
-    List,
-    Mapping,
-    MutableSequence,
-    Optional,
-    Union,
-)
+from typing import Iterable, List, Mapping, MutableSequence, Optional, Union
 
 from confz import ConfZ, ConfZFileSource
 from confz.exceptions import ConfZFileException
