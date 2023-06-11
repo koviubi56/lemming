@@ -16,74 +16,35 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-# SPDX-License-Identifier: GPL-3.0-or-later
-import argparse
 import pathlib
 import time
-from typing import List, Literal, Tuple
+from typing import Annotated, Optional, Self, TypedDict
 
 import mylog
-from confz import ConfZFileSource
-from typing_extensions import Self
 
-from . import __version__, config, logger
+# SPDX-License-Identifier: GPL-3.0-or-later
+import typer
 
-PARSER = argparse.ArgumentParser(
-    description="Lemming is a tool for formatting and linting code.",
-    prog="lemming",
+from . import __version__, logger
+from .config import (
+    Config,
+    Formatter,
+    Linter,
+    WhatToQuiet,
+    get_config,
+    get_config_dot_lemming,
+    get_config_pyproject,
 )
-PARSER.add_argument(
-    "task",
-    choices=("format", "check"),
-    help="format the code with the formatters, or check the code with the"
-    " formatters (linters will be ran in all cases)",
-)
-PARSER.add_argument(
-    "path",
-    action="append",
-    type=pathlib.Path,
-    help="the paths (files and directories) to check. These arguments will be"
-    " passed to the formatters and linters as arguments where {path} is used",
-)
-PARSER.add_argument(
-    "-v",
-    "--verbose",
-    action="store_true",
-    help="log more information",
-)
-PARSER.add_argument(
-    "-q",
-    "--quiet",
-    action="count",
-    help="log less information. Can be passed multiple times",
-    default=0,
-)
-PARSER.add_argument(
-    "--quiet-commands",
-    action="store_true",
-    help="don't let ran commands write to stdout and stderr. Use --quiet-pip"
-    " to quiet `pip`",
-)
-PARSER.add_argument(
-    "--quiet-pip",
-    action="store_true",
-    help="don't let pip write to stdout and stderr. Use --quiet-commands"
-    " to quiet the formatters and linters",
-)
-PARSER.add_argument(
-    "-c",
-    "--config",
-    default=None,
-    help="the config file to use. If passed all other config files will be"
-    " ignored",
-)
-PARSER.add_argument(
-    "-V",
-    "--version",
-    action="version",
-    help="print the program's version and exit",
-    version=__version__,
-)
+
+app = typer.Typer(no_args_is_help=True)
+
+
+class _Settings(TypedDict):
+    what_to_quiet: WhatToQuiet
+    config: Config
+
+
+SETTINGS: _Settings
 
 
 class Timer:
@@ -100,250 +61,203 @@ class Timer:
         self.time = time.perf_counter() - self.start
 
 
-def parse_args() -> argparse.Namespace:
-    return PARSER.parse_args()
-
-
-def _get_paths_to_check(args: argparse.Namespace) -> List[pathlib.Path]:
-    paths_to_check = args.path
-    logger.debug(f"{paths_to_check = !r}")
-    if not (
-        isinstance(paths_to_check, list)
-        and all(isinstance(path, pathlib.Path) for path in paths_to_check)
-    ):
-        PARSER.error("invalid paths")
-    return paths_to_check
-
-
-def _set_logger(args: argparse.Namespace) -> None:
-    verbose = args.verbose
-    quiet = args.quiet
-    logger.debug(f"{verbose = !r}")
-    logger.debug(f"{quiet = !r}")
-    if verbose and quiet:
-        PARSER.error("cannot have both verbose and quiet")
-    if quiet >= 4:
-        logger.handlers = []
-    elif quiet == 3:
-        logger.threshold = mylog.Level.critical
-    elif quiet == 2:
-        logger.threshold = mylog.Level.error
-    elif quiet == 1:
-        logger.threshold = mylog.Level.warning
-    if verbose:
-        logger.threshold = mylog.Level.debug
-    logger.debug(f"{logger.threshold = !r}")
-
-
-def _get_what_to_quiet(args: argparse.Namespace) -> config.WhatToQuiet:
-    return config.WhatToQuiet(args.quiet_commands, args.quiet_pip)
-
-
-def _get_config_file(args: argparse.Namespace) -> pathlib.Path:
-    config_file = args.config
-    logger.debug(f"{config_file = !r}")
-    if config_file is not None:
-        config_file = pathlib.Path(config_file).resolve()
-        if not config_file.exists():
-            PARSER.error(f"config file {config_file} doesn't exist")
-        if not config_file.is_file():
-            PARSER.error(f"config file {config_file} isn't a file")
-    logger.debug(f"{config_file = !r}")
-    return config_file
-
-
-def _get_configuration_configprovided(
-    config_file: pathlib.Path,
-) -> config.Config:
-    logger.debug("config_file is provided, using that")
-    return config.Config(ConfZFileSource(file=config_file))
-
-
-def _get_configuration_confignotprovided() -> config.Config:
-    logger.debug("config_file is None, searching for it")
-    return config.get_config(".")
-
-
-def _get_configuration(args: argparse.Namespace) -> config.Config:
-    # sourcery skip: assign-if-exp, inline-immediately-returned-variable
-    config_file = _get_config_file(args)
-
-    if config_file:
-        return _get_configuration_configprovided(config_file)
-    return _get_configuration_confignotprovided()
-
-
-def get_configuration() -> (
-    Tuple[
-        config.Config,
-        List[pathlib.Path],
-        config.WhatToQuiet,
-        Literal["format", "check"],
-    ]
-):
-    logger.debug("Parsing args")
-    with logger.ctxmgr:
-        args = parse_args()
-
-        paths_to_check = _get_paths_to_check(args)
-
-        _set_logger(args)
-
-        configuration = _get_configuration(args)
-
-        what_to_quiet = _get_what_to_quiet(args)
-
-        task = args.task
-    return configuration, paths_to_check, what_to_quiet, task
-
-
-def _formatters(
-    configuration: config.Config,
-    paths_to_check: List[pathlib.Path],
-    what_to_quiet: config.WhatToQuiet,
-    task: Literal["format", "check"],
-) -> bool:
-    logger.info(f"Running formatters ({task})")
-    with logger.ctxmgr:
-        with Timer() as formatters_timer:
-            for formatter in configuration.formatters:
-                logger.info(f"Running formatter {formatter.packages} ({task})")
-                with logger.ctxmgr:
-                    with Timer() as formatter_timer:
-                        if task == "format":
-                            success = formatter.run_format(
-                                paths_to_check, what_to_quiet
-                            )
-                        elif task == "check":
-                            success = formatter.run_check(
-                                paths_to_check, what_to_quiet
-                            )
-                        else:
-                            PARSER.error(f"unknown task: {task!r}")
-
-                        if not success:
-                            logger.error(
-                                "Could not run formatter"
-                                f" {formatter.packages}!"
-                            )
-                            if configuration.fail_fast:
-                                PARSER.exit(1, "\nFAILED!\n")
-                            else:
-                                return False
-                    logger.info(
-                        f"Ran formatter in {formatter_timer.time} seconds"
-                    )
-        logger.info(f"Ran all formatters in {formatters_timer.time} seconds")
-        return True
-
-
-def _run_linter(
-    configuration: config.Config,
-    paths_to_check: List[pathlib.Path],
-    what_to_quiet: config.WhatToQuiet,
-    linter: config.Linter,
-) -> bool:
+def run_linter(linter: Linter, paths: list[pathlib.Path]) -> bool:
     with logger.ctxmgr:
         with Timer() as linter_timer:
-            success = linter.run(paths_to_check, what_to_quiet)
+            success = linter.run(paths, SETTINGS["what_to_quiet"])
             if not success:
                 logger.error(
                     f"Could not run linter {linter.packages}!"
                     " Please see the linter's output for more"
                     " details."
                 )
-                if configuration.fail_fast:
-                    PARSER.exit(1, "\nFAILED!\n")
-                else:
-                    return False
+                if SETTINGS["config"].fail_fast:
+                    raise typer.Exit(1)
+                return False
         logger.info(f"Ran linter in {linter_timer.time} seconds")
         return True
 
 
-def _linters_first(
-    configuration: config.Config,
-    paths_to_check: List[pathlib.Path],
-    what_to_quiet: config.WhatToQuiet,
-) -> bool:
-    logger.info("Running (first) linters")
+def linter_first(paths: list[pathlib.Path]) -> bool:
+    logger.info("Running first linters")
     return_value = True
     with logger.ctxmgr:
         with Timer() as linters_timer:
-            for linter in configuration.get_first_linters():
-                logger.info(f"Running (first) linter {linter.packages}")
-                success = _run_linter(
-                    configuration, paths_to_check, what_to_quiet, linter
-                )
+            for linter in SETTINGS["config"].get_first_linters():
+                logger.info(f"Running first linter {linter.packages}")
+                success = run_linter(linter, paths)
                 if not success:
                     return_value = False
         logger.info(f"Ran all (first) linters in {linters_timer.time} seconds")
         return return_value
 
 
-def _linters_other(
-    configuration: config.Config,
-    paths_to_check: List[pathlib.Path],
-    what_to_quiet: config.WhatToQuiet,
+def run_formatter(
+    formatter: Formatter, paths: list[pathlib.Path], format_: bool
 ) -> bool:
-    logger.info("Running (other) linters")
+    with logger.ctxmgr:
+        with Timer() as formatter_timer:
+            if format_:
+                success = formatter.run_format(
+                    paths, SETTINGS["what_to_quiet"]
+                )
+            else:
+                success = formatter.run_check(paths, SETTINGS["what_to_quiet"])
+
+            if not success:
+                logger.error(f"Could not run formatter {formatter.packages}!")
+                if SETTINGS["config"].fail_fast:
+                    raise typer.Exit(1)
+                return False
+        logger.info(f"Ran formatter in {formatter_timer.time} seconds")
+        return True
+
+
+def formatter(format_: bool, paths: list[pathlib.Path]) -> bool:
+    logger.info("Running formatters")
     return_value = True
     with logger.ctxmgr:
-        with Timer() as linters_timer:
-            for linter in configuration.get_other_linters():
-                logger.info(f"Running (other) linter {linter.packages}")
-                success = _run_linter(
-                    configuration, paths_to_check, what_to_quiet, linter
-                )
+        with Timer() as formatters_timer:
+            for formatter in SETTINGS["config"].formatters:
+                logger.info(f"Running formatter {formatter.packages}")
+                success = run_formatter(formatter, paths, format_)
                 if not success:
                     return_value = False
-        logger.info(f"Ran all (other) linters in {linters_timer.time} seconds")
+        logger.info(f"Ran all formatters in {formatters_timer.time} seconds")
         return return_value
 
 
-def main() -> None:
+def linter_other(paths: list[pathlib.Path]) -> bool:
+    logger.info("Running other linters")
+    return_value = True
+    with logger.ctxmgr:
+        with Timer() as linters_timer:
+            for linter in SETTINGS["config"].get_other_linters():
+                logger.info(f"Running other linter {linter.packages}")
+                success = run_linter(linter, paths)
+                if not success:
+                    return_value = False
+        logger.info(f"Ran all other linters in {linters_timer.time} seconds")
+        return return_value
+
+
+def run(paths: list[pathlib.Path], format_: bool) -> None:
     with Timer() as all_timer:
-        with Timer() as config_timer:
-            (
-                configuration,
-                paths_to_check,
-                what_to_quiet,
-                task,
-            ) = get_configuration()
-        logger.debug(
-            f"Got configuration {configuration} in {config_timer.time} seconds"
-        )
+        success = True
+        if linter_first(paths) is False:
+            success = False
+        if formatter(format_, paths) is False:
+            success = False
+        if linter_other(paths) is False:
+            success = False
 
-        linter_first_success = _linters_first(
-            configuration, paths_to_check, what_to_quiet
-        )
-
-        formatter_success = _formatters(
-            configuration, paths_to_check, what_to_quiet, task
-        )
-
-        linter_other_success = _linters_other(
-            configuration, paths_to_check, what_to_quiet
-        )
-
-        if not all(
-            (linter_first_success, formatter_success, linter_other_success)
-        ):
+        if not success:
             logger.error(
-                "Failed, due to one or more linters/formatters failing."
+                "Failed, due to one or more linters/formatters failing. (HINT:"
+                " Set fail_fast=true to disable this behavior)"
             )
-            logger.error("HINT: Set fail_fast=true to disable this behavior")
-            PARSER.exit(1, "\nFAILED\n")
-
+            raise typer.Exit(1)
     logger.info(
         f"Successfully ran all formatters and linters in {all_timer.time}"
         " seconds with no errors. Good job!"
     )
-    if not what_to_quiet.pip:
-        logger.info(
-            "*!*!* HINT: Do you get overwhelmed by pip's output? Consider"
-            " using the --quiet-pip argument for Lemming !*!*!"
+
+
+def quiet_callback(value: bool) -> None:
+    if value:
+        logger.threshold += 10
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        print(__version__)
+        raise typer.Exit(0)
+
+
+@app.command("format")
+def format_(
+    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)]
+) -> None:
+    """Format your code and run linters."""
+    run(paths, True)
+
+
+@app.command()
+def check(
+    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)]
+) -> None:
+    """Check the formatting of your code and run linters."""
+    run(paths, False)
+
+
+@app.callback()
+def callback(
+    _version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-V",
+            help="Print the version of Lemming and exit.",
+            callback=version_callback,
+        ),
+    ] = False,
+    quiet_commands: Annotated[
+        bool,
+        typer.Option(
+            help="If passed the output of the formatters and linters will be"
+            " hidden.",
+        ),
+    ] = False,
+    quiet_pip: Annotated[
+        bool,
+        typer.Option(
+            help="If passed the output of pip will be hidden.",
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="If passed the logger's threshold will be set to debug.",
+        ),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option(
+            "--quiet",
+            "-q",
+            callback=quiet_callback,
+            help="When passed the logger's threshold will be increased by 10"
+            " (may be passed multiple times)",
+        ),
+    ] = False,
+    config: Annotated[
+        Optional[pathlib.Path],
+        typer.Option(
+            exists=True, dir_okay=False, help="The config file to use."
+        ),
+    ] = None,
+) -> None:
+    if verbose:
+        if quiet:
+            logger.critical("Verbose and quiet are mutually exclusive!")
+            raise typer.Exit(2)
+        logger.threshold = mylog.Level.debug
+    if config:
+        config_ = (
+            get_config_pyproject(config)
+            if config.name == "pyproject.toml"
+            else get_config_dot_lemming(config.parent)
         )
+    else:
+        config_ = get_config(".")
+    global SETTINGS  # noqa: PLW0603
+    SETTINGS = _Settings(
+        what_to_quiet=WhatToQuiet(commands=quiet_commands, pip=quiet_pip),
+        config=config_,
+    )
 
 
 if __name__ == "__main__":
-    main()
+    app()
