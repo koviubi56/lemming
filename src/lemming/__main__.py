@@ -284,7 +284,7 @@ def _linters_other(
     configuration: config.Config,
     paths_to_check: List[pathlib.Path],
     what_to_quiet: config.WhatToQuiet,
-) -> None:
+) -> bool:
     logger.info("Running (other) linters")
     return_value = True
     with logger.ctxmgr:

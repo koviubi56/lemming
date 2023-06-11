@@ -23,19 +23,17 @@ import shlex
 import subprocess  # noqa: S404
 import sys
 from typing import (
-    AnyStr,
     Iterable,
     List,
     Mapping,
     MutableSequence,
     Optional,
-    Protocol,
     Union,
 )
 
 from confz import ConfZ, ConfZFileSource
 from confz.exceptions import ConfZFileException
-from typing_extensions import NamedTuple, Self, TypeAlias, TypeVar
+from typing_extensions import NamedTuple, Self, TypeVar
 
 from . import logger
 
@@ -55,14 +53,6 @@ CONFIG_HAS_NO_LEMMING_STUFF = ValueError(
     # we search for config["tool"]["lemming"]
 )
 T = TypeVar("T")
-
-
-class _PathLike(Protocol):
-    def __fspath__(self) -> AnyStr:
-        ...
-
-
-PathLike: TypeAlias = Union[_PathLike, AnyStr]
 
 
 class WhatToQuiet(NamedTuple):
@@ -346,8 +336,8 @@ def get_config_pyproject(pyproject: pathlib.Path) -> Config:
     return Config(**lemming_config)
 
 
-def get_config(folder: PathLike) -> None:
-    folder = pathlib.Path(folder)
+def get_config(_folder: Union[os.PathLike[str], str]) -> Config:
+    folder = pathlib.Path(_folder)
     try:
         # try .lemming.toml
         return get_config_dot_lemming(folder)
