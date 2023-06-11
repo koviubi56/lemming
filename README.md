@@ -38,7 +38,7 @@ Please note, that there must be a `lemming` or `tool.lemming` key in the config 
 The config looks like this:
 
 ```toml
-fail_fast = false  # OPTIONAL, wheter or not immediately quit in case of an error
+fail_fast = false  # OPTIONAL, whether or not immediately quit in case of an error
 
 [[lemming.formatters]]
 packages = ["example"]  # REQUIRED, the package(s) to install with pip (might include versions with "==x.y.z")
