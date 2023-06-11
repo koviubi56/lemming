@@ -1,0 +1,72 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Lemming",
+    "description": "Lemming is a tool for formatting and linting your code.",
+    "$defs": {
+        "packages": {
+            "description": "The packages to install (may include versions with ==x.y.z)",
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "type": "object",
+    "properties": {
+        "fail_fast": {
+            "description": "Whether or not to abort immediately when a formatter or linter fails.",
+            "type": "boolean"
+        },
+        "formatters": {
+            "description": "The formatters used to format your code.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "packages": {
+                        "$ref": "#/$defs/packages"
+                    },
+                    "format_command": {
+                        "description": "The command to use when formatting your code.",
+                        "type": "string"
+                    },
+                    "check_command": {
+                        "description": "The command to use when checking your code.",
+                        "type": "string"
+                    },
+                    "allow_nonzero_on_format": {
+                        "description": "Whether or not to allow format_command to return a non-zero status",
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "format_command"
+                ]
+            }
+        },
+        "linters": {
+            "description": "The linters used to lint your code.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "packages": {
+                        "$ref": "#/$defs/packages"
+                    },
+                    "command": {
+                        "description": "The command used to lint your code.",
+                        "type": "string"
+                    },
+                    "run_first": {
+                        "description": "Whether or not to run this linter before other linters and formatters",
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "packages",
+                    "command"
+                ]
+            }
+        }
+    }
+}
