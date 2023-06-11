@@ -40,13 +40,13 @@ The config looks like this:
 ```toml
 fail_fast = false  # OPTIONAL, whether or not immediately quit in case of an error
 
-[[lemming.formatters]]
+[[formatters]]
 packages = ["example"]  # REQUIRED, the package(s) to install with pip (might include versions with "==x.y.z")
 format_command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to format the code ({pyexe} will be replaced with the python executable, {path} with the path passed to Lemming (usually the current working directory: "."))
 check_command = "{pyexe} -m example --check {path}"  # OPTIONAL, the command to run to check the code (stuff will be replaced just like in format_command)
 allow_nonzero_on_format = true  # OPTIONAL, if true it is allowed for the format_command to return a non-zero exit status
 
-[[lemming.linters]]
+[[linters]]
 packages = ["example"]  # REQUIRED, same as for formatters
 command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to lint the code (stuff will be replaced just like in format_command)
 run_first = true  # OPTIONAL, if true this linter will be ran BEFORE formatters, and linters with this being false. Defaults to false.
