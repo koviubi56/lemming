@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## Added
+
+- **! Added option to install a custom pre-commit git hook which will run `lemming format` before every commit. #19**
+
 ## [0.4.1] - 2023-03-28
 
 ## Fixed
