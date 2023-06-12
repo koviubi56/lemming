@@ -216,7 +216,7 @@ def install_pre_commit(git_repository: pathlib.Path) -> None:
     if not git_directory.exists():
         logger.critical(f"Directory {git_repository} is not a git repository!")
         raise typer.Exit(1)
-    pre_commit = git_repository / "hooks" / "pre-commit"
+    pre_commit = git_directory / "hooks" / "pre-commit"
     if pre_commit.exists():
         logger.warning(
             f"pre-commit file {pre_commit} already exists! Overwriting..."
