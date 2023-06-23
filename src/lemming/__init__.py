@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 # SPDX-License-Identifier: GPL-3.0-or-later
 __all__ = ["__version__", "logger"]
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 import mylog
 
 logger = mylog.root.get_child("lemming")

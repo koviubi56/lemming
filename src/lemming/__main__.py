@@ -16,14 +16,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+# SPDX-License-Identifier: GPL-3.0-or-later
 import pathlib
 import sys
 import time
 from typing import Annotated, Optional, Self, TypedDict
 
 import mylog
-
-# SPDX-License-Identifier: GPL-3.0-or-later
 import typer
 
 from . import __version__, logger
@@ -312,5 +311,9 @@ def callback(
     )
 
 
+def main() -> None:
+    return app()
+
+
 if __name__ == "__main__":
-    app()
+    main()

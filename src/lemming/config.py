@@ -303,8 +303,8 @@ class Linter(FormatterOrLinter):
 
 class Config(ConfZ):
     # we should be safe with mutable default arguments
-    formatters: List[Formatter] = []
-    linters: List[Linter] = []
+    formatters: List[Formatter] = []  # noqa: RUF012
+    linters: List[Linter] = []  # noqa: RUF012
     # ^ also modify within read_config_file()
     fail_fast: bool = True
 
