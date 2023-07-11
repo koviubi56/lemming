@@ -306,7 +306,7 @@ class Config(pydantic.BaseModel):
 
 
 def get_config_dot_lemming(folder: pathlib.Path) -> Config:
-    return Config.parse_obj(
+    return Config.model_validate(
         tomllib.loads((folder / CONFIG_FILE_NAME).read_text(encoding="utf-8"))
     )
 
@@ -318,7 +318,7 @@ def get_config_pyproject(pyproject: pathlib.Path) -> Config:
         lemming_config = pyproject_config["tool"]["lemming"]
     except KeyError as exception:
         raise CONFIG_HAS_NO_LEMMING_STUFF from exception
-    return Config.parse_obj(lemming_config)
+    return Config.model_validate(lemming_config)
 
 
 def get_config(_folder: Union[os.PathLike[str], str]) -> Config:
