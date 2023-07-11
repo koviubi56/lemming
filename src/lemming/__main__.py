@@ -108,7 +108,7 @@ def run_linter(
             success = linter.run(paths, settings["what_to_quiet"])
             if not success:
                 logger.error(
-                    f"Could not run linter {linter.packages}!"
+                    f"Could not run linter {linter.name}!"
                     " Please see the linter's output for more"
                     " details."
                 )
@@ -135,7 +135,7 @@ def linter_first(paths: List[pathlib.Path], settings: Settings) -> bool:
     with logger.ctxmgr:
         with Timer() as linters_timer:
             for linter in settings["config"].get_first_linters():
-                logger.info(f"Running first linter {linter.packages}")
+                logger.info(f"Running first linter {linter.name}")
                 success = run_linter(linter, paths, settings)
                 if not success:
                     return_value = False
@@ -174,7 +174,7 @@ def run_formatter(
                 success = formatter.run_check(paths, settings["what_to_quiet"])
 
             if not success:
-                logger.error(f"Could not run formatter {formatter.packages}!")
+                logger.error(f"Could not run formatter {formatter.name}!")
                 if settings["config"].fail_fast:
                     raise typer.Exit(1)
                 return False
@@ -201,7 +201,7 @@ def formatter(
     with logger.ctxmgr:
         with Timer() as formatters_timer:
             for formatter in settings["config"].formatters:
-                logger.info(f"Running formatter {formatter.packages}")
+                logger.info(f"Running formatter {formatter.name}")
                 success = run_formatter(formatter, paths, format_, settings)
                 if not success:
                     return_value = False
@@ -225,7 +225,7 @@ def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
     with logger.ctxmgr:
         with Timer() as linters_timer:
             for linter in settings["config"].get_other_linters():
-                logger.info(f"Running other linter {linter.packages}")
+                logger.info(f"Running other linter {linter.name}")
                 success = run_linter(linter, paths, settings)
                 if not success:
                     return_value = False
