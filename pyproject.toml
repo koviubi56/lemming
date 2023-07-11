@@ -57,9 +57,6 @@ fixable = [
 [tool.ruff.flake8-quotes]
 inline-quotes = "double"
 
-[tool.lemming]
-fail_fast = false
-
 [[tool.lemming.formatters]]
 packages = ["black"]
 format_command = "{pyexe} -m black -l 79 {path}"
@@ -69,11 +66,6 @@ check_command = "{pyexe} -m black -l 79 --check --extend-exclude .*venv.* {path}
 packages = ["setup_cfg_fmt"]
 format_command = "{pyexe} -m setup_cfg_fmt --include-version-classifiers"
 # no check
-
-[[tool.lemming.formatters]]
-packages = ["isort"]
-format_command = "{pyexe} -m isort --profile black {path}"
-check_command = "{pyexe} -m isort --profile black -c {path}"
 
 [[tool.lemming.formatters]]
 packages = ["ruff"]
