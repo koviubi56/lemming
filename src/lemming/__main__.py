@@ -17,13 +17,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 # SPDX-License-Identifier: GPL-3.0-or-later
+import dataclasses
 import pathlib
 import sys
 import time
 from typing import List, Optional
 
 import typer
-from typing_extensions import Annotated, Self, TypedDict
+from typing_extensions import Annotated, Self
 
 from . import __version__, logger
 from .config import (
@@ -56,17 +57,26 @@ exit $ret_code
 app = typer.Typer(no_args_is_help=True)
 
 
-class Settings(TypedDict):
+@dataclasses.dataclass(frozen=True)
+class Settings:
     """
     The settings.
 
     Args:
         what_to_quiet (WhatToQuiet): What to quiet.
         config (Config): The configuration.
+        only (Optional[List[str]]): Only run these formatters/linters. If
+        None, run all.
     """
 
     what_to_quiet: WhatToQuiet
     config: Config
+    only: Optional[List[str]]
+
+    def should_run(self, name: str) -> bool:
+        if self.only is None:
+            return True
+        return name in self.only
 
 
 class Timer:
@@ -105,14 +115,14 @@ def run_linter(
     """
     with logger.ctxmgr:
         with Timer() as linter_timer:
-            success = linter.run(paths, settings["what_to_quiet"])
+            success = linter.run(paths, settings.what_to_quiet)
             if not success:
                 logger.error(
                     f"Could not run linter {linter.name}!"
                     " Please see the linter's output for more"
                     " details."
                 )
-                if settings["config"].fail_fast:
+                if settings.config.fail_fast:
                     raise typer.Exit(1)
                 return False
         logger.info(f"Ran linter in {linter_timer.time} seconds")
@@ -134,7 +144,10 @@ def linter_first(paths: List[pathlib.Path], settings: Settings) -> bool:
     return_value = True
     with logger.ctxmgr:
         with Timer() as linters_timer:
-            for linter in settings["config"].get_first_linters():
+            for linter in settings.config.get_first_linters():
+                if not settings.should_run(linter.name):
+                    logger.info(f"Skipping first linter {linter.name}")
+                    continue
                 logger.info(f"Running first linter {linter.name}")
                 success = run_linter(linter, paths, settings)
                 if not success:
@@ -167,15 +180,13 @@ def run_formatter(
     with logger.ctxmgr:
         with Timer() as formatter_timer:
             if format_:
-                success = formatter.run_format(
-                    paths, settings["what_to_quiet"]
-                )
+                success = formatter.run_format(paths, settings.what_to_quiet)
             else:
-                success = formatter.run_check(paths, settings["what_to_quiet"])
+                success = formatter.run_check(paths, settings.what_to_quiet)
 
             if not success:
                 logger.error(f"Could not run formatter {formatter.name}!")
-                if settings["config"].fail_fast:
+                if settings.config.fail_fast:
                     raise typer.Exit(1)
                 return False
         logger.info(f"Ran formatter in {formatter_timer.time} seconds")
@@ -200,7 +211,10 @@ def formatter(
     return_value = True
     with logger.ctxmgr:
         with Timer() as formatters_timer:
-            for formatter in settings["config"].formatters:
+            for formatter in settings.config.formatters:
+                if not settings.should_run(formatter.name):
+                    logger.info(f"Skipping formatter {formatter.name}")
+                    continue
                 logger.info(f"Running formatter {formatter.name}")
                 success = run_formatter(formatter, paths, format_, settings)
                 if not success:
@@ -224,7 +238,10 @@ def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
     return_value = True
     with logger.ctxmgr:
         with Timer() as linters_timer:
-            for linter in settings["config"].get_other_linters():
+            for linter in settings.config.get_other_linters():
+                if not settings.should_run(linter.name):
+                    logger.info(f"Skipping other linter {linter.name}")
+                    continue
                 logger.info(f"Running other linter {linter.name}")
                 success = run_linter(linter, paths, settings)
                 if not success:
@@ -321,6 +338,7 @@ def both(
     verbose: bool,
     quiet: bool,
     config: Optional[pathlib.Path],
+    only: Optional[List[str]],
 ) -> Settings:
     """
     Create the settings, and do some stuff with the given options.
@@ -335,6 +353,8 @@ def both(
         quiet (bool): Increase the loggers threshold by 10 (done by the
         callback).
         config (Optional[pathlib.Path]): The configuration to use or None.
+        only (Optional[List[str]]): Only run these formatters/linters. If
+        None, run all.
 
     Raises:
         typer.Exit: If both verbose and quiet is passed.
@@ -356,6 +376,7 @@ def both(
     return Settings(
         what_to_quiet=WhatToQuiet(commands=quiet_commands, pip=quiet_pip),
         config=config_,
+        only=only,
     )
 
 
@@ -407,9 +428,20 @@ def format_(
             exists=True, dir_okay=False, help="The config file to use."
         ),
     ] = None,
+    only: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            help="Only run these formatters/linters (may be passed multiple"
+            " times)"
+        ),
+    ] = None,
 ) -> None:
     """Format your code and run linters."""
-    run(paths, True, both(quiet_commands, quiet_pip, verbose, quiet, config))
+    run(
+        paths,
+        True,
+        both(quiet_commands, quiet_pip, verbose, quiet, config, only),
+    )
 
 
 @app.command()
@@ -457,12 +489,23 @@ def check(
     config: Annotated[
         Optional[pathlib.Path],
         typer.Option(
-            exists=True, dir_okay=False, help="The config file to use."
+            exists=True, dir_okay=False, help="The config file to use"
+        ),
+    ] = None,
+    only: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            help="Only run these formatters/linters (may be passed multiple"
+            " times)"
         ),
     ] = None,
 ) -> None:
     """Check the formatting of your code and run linters."""
-    run(paths, False, both(quiet_commands, quiet_pip, verbose, quiet, config))
+    run(
+        paths,
+        False,
+        both(quiet_commands, quiet_pip, verbose, quiet, config, only),
+    )
 
 
 def install_pre_commit(git_repository: pathlib.Path) -> None:

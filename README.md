@@ -99,7 +99,8 @@ You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lem
 │ --quiet-pip,--qp                     If passed the output of pip will be hidden.                                                │
 │ --verbose              -v            When passed the logger's threshold will be decreased by 10 (may be passed multiple times)  │
 │ --quiet                -q            When passed the logger's threshold will be increased by 10 (may be passed multiple times)  │
-│ --config                       FILE  The config file to use. [default: None]                                                    │
+│ --config                       FILE  The config file to use [default: None]                                                     │
+│ --only                         TEXT  Only run these formatters/linters (may be passed multiple times) [default: None]           │
 │ --help                               Show this message and exit.                                                                │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
@@ -107,7 +108,7 @@ You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lem
 ### Format
 
 ```bash
- Usage: lemming format [OPTIONS] PATHS...
+Usage: lemming format [OPTIONS] PATHS...
 
  Format your code and run linters.
 
@@ -120,6 +121,7 @@ You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lem
 │ --verbose              -v            When passed the logger's threshold will be decreased by 10 (may be passed multiple times)  │
 │ --quiet                -q            When passed the logger's threshold will be increased by 10 (may be passed multiple times)  │
 │ --config                       FILE  The config file to use. [default: None]                                                    │
+│ --only                         TEXT  Only run these formatters/linters (may be passed multiple times) [default: None]           │
 │ --help                               Show this message and exit.                                                                │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
