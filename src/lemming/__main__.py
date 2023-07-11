@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import pathlib
 import sys
 import time
-from typing import Annotated, Optional, Self, TypedDict
+from typing import Optional
 
-import mylog
 import typer
+from typing_extensions import Annotated, Self, TypedDict
 
 from . import __version__, logger
 from .config import (
@@ -44,10 +44,10 @@ set -e
 PYTHON='{}'
 
 if [[ -n $LEMMING_VERBOSE ]]; then
-    exec $PYTHON -m lemming format -v $(pwd)
+    exec $PYTHON -m lemming format --verbose $(pwd)
     ret_code=$?
 else
-    exec $PYTHON -m lemming -q --quiet-pip format "$(pwd)"
+    exec $PYTHON -m lemming format --quiet-pip "$(pwd)"
     ret_code=$?
 fi
 exit $ret_code
@@ -56,12 +56,9 @@ exit $ret_code
 app = typer.Typer(no_args_is_help=True)
 
 
-class _Settings(TypedDict):
+class Settings(TypedDict):
     what_to_quiet: WhatToQuiet
     config: Config
-
-
-SETTINGS: _Settings
 
 
 class Timer:
@@ -78,31 +75,33 @@ class Timer:
         self.time = time.perf_counter() - self.start
 
 
-def run_linter(linter: Linter, paths: list[pathlib.Path]) -> bool:
+def run_linter(
+    linter: Linter, paths: list[pathlib.Path], settings: Settings
+) -> bool:
     with logger.ctxmgr:
         with Timer() as linter_timer:
-            success = linter.run(paths, SETTINGS["what_to_quiet"])
+            success = linter.run(paths, settings["what_to_quiet"])
             if not success:
                 logger.error(
                     f"Could not run linter {linter.packages}!"
                     " Please see the linter's output for more"
                     " details."
                 )
-                if SETTINGS["config"].fail_fast:
+                if settings["config"].fail_fast:
                     raise typer.Exit(1)
                 return False
         logger.info(f"Ran linter in {linter_timer.time} seconds")
         return True
 
 
-def linter_first(paths: list[pathlib.Path]) -> bool:
+def linter_first(paths: list[pathlib.Path], settings: Settings) -> bool:
     logger.info("Running first linters")
     return_value = True
     with logger.ctxmgr:
         with Timer() as linters_timer:
-            for linter in SETTINGS["config"].get_first_linters():
+            for linter in settings["config"].get_first_linters():
                 logger.info(f"Running first linter {linter.packages}")
-                success = run_linter(linter, paths)
+                success = run_linter(linter, paths, settings)
                 if not success:
                     return_value = False
         logger.info(f"Ran all (first) linters in {linters_timer.time} seconds")
@@ -110,62 +109,67 @@ def linter_first(paths: list[pathlib.Path]) -> bool:
 
 
 def run_formatter(
-    formatter: Formatter, paths: list[pathlib.Path], format_: bool
+    formatter: Formatter,
+    paths: list[pathlib.Path],
+    format_: bool,
+    settings: Settings,
 ) -> bool:
     with logger.ctxmgr:
         with Timer() as formatter_timer:
             if format_:
                 success = formatter.run_format(
-                    paths, SETTINGS["what_to_quiet"]
+                    paths, settings["what_to_quiet"]
                 )
             else:
-                success = formatter.run_check(paths, SETTINGS["what_to_quiet"])
+                success = formatter.run_check(paths, settings["what_to_quiet"])
 
             if not success:
                 logger.error(f"Could not run formatter {formatter.packages}!")
-                if SETTINGS["config"].fail_fast:
+                if settings["config"].fail_fast:
                     raise typer.Exit(1)
                 return False
         logger.info(f"Ran formatter in {formatter_timer.time} seconds")
         return True
 
 
-def formatter(format_: bool, paths: list[pathlib.Path]) -> bool:
+def formatter(
+    format_: bool, paths: list[pathlib.Path], settings: Settings
+) -> bool:
     logger.info("Running formatters")
     return_value = True
     with logger.ctxmgr:
         with Timer() as formatters_timer:
-            for formatter in SETTINGS["config"].formatters:
+            for formatter in settings["config"].formatters:
                 logger.info(f"Running formatter {formatter.packages}")
-                success = run_formatter(formatter, paths, format_)
+                success = run_formatter(formatter, paths, format_, settings)
                 if not success:
                     return_value = False
         logger.info(f"Ran all formatters in {formatters_timer.time} seconds")
         return return_value
 
 
-def linter_other(paths: list[pathlib.Path]) -> bool:
+def linter_other(paths: list[pathlib.Path], settings: Settings) -> bool:
     logger.info("Running other linters")
     return_value = True
     with logger.ctxmgr:
         with Timer() as linters_timer:
-            for linter in SETTINGS["config"].get_other_linters():
+            for linter in settings["config"].get_other_linters():
                 logger.info(f"Running other linter {linter.packages}")
-                success = run_linter(linter, paths)
+                success = run_linter(linter, paths, settings)
                 if not success:
                     return_value = False
         logger.info(f"Ran all other linters in {linters_timer.time} seconds")
         return return_value
 
 
-def run(paths: list[pathlib.Path], format_: bool) -> None:
+def run(paths: list[pathlib.Path], format_: bool, settings: Settings) -> None:
     with Timer() as all_timer:
         success = True
-        if linter_first(paths) is False:
+        if linter_first(paths, settings) is False:
             success = False
-        if formatter(format_, paths) is False:
+        if formatter(format_, paths, settings) is False:
             success = False
-        if linter_other(paths) is False:
+        if linter_other(paths, settings) is False:
             success = False
 
         if not success:
@@ -180,9 +184,16 @@ def run(paths: list[pathlib.Path], format_: bool) -> None:
     )
 
 
-def quiet_callback(value: bool) -> None:
+def quiet_callback(value: bool) -> bool:
     if value:
         logger.threshold += 10
+    return value
+
+
+def verbose_callback(value: bool) -> bool:
+    if value:
+        logger.threshold -= 10
+    return value
 
 
 def version_callback(value: bool) -> None:
@@ -191,20 +202,134 @@ def version_callback(value: bool) -> None:
         raise typer.Exit(0)
 
 
+def both(
+    quiet_commands: bool,
+    quiet_pip: bool,
+    verbose: bool,
+    quiet: bool,
+    config: Optional[pathlib.Path],
+) -> Settings:
+    if verbose and quiet:
+        logger.critical("Verbose and quiet are mutually exclusive!")
+        raise typer.Exit(2)
+    if config:
+        config_ = (
+            get_config_pyproject(config)
+            if config.name == "pyproject.toml"
+            else get_config_dot_lemming(config.parent)
+        )
+    else:
+        config_ = get_config(".")
+    return Settings(
+        what_to_quiet=WhatToQuiet(commands=quiet_commands, pip=quiet_pip),
+        config=config_,
+    )
+
+
 @app.command("format")
 def format_(
-    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)]
+    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)],
+    quiet_commands: Annotated[
+        bool,
+        typer.Option(
+            ...,
+            "--quiet-commands",
+            "--qc",
+            help="If passed the output of the formatters and linters will be"
+            " hidden.",
+        ),
+    ] = False,
+    quiet_pip: Annotated[
+        bool,
+        typer.Option(
+            ...,
+            "--quiet-pip",
+            "--qp",
+            help="If passed the output of pip will be hidden.",
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            callback=verbose_callback,
+            help="When passed the logger's threshold will be decreased by 10"
+            " (may be passed multiple times)",
+        ),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option(
+            "--quiet",
+            "-q",
+            callback=quiet_callback,
+            help="When passed the logger's threshold will be increased by 10"
+            " (may be passed multiple times)",
+        ),
+    ] = False,
+    config: Annotated[
+        Optional[pathlib.Path],
+        typer.Option(
+            exists=True, dir_okay=False, help="The config file to use."
+        ),
+    ] = None,
 ) -> None:
     """Format your code and run linters."""
-    run(paths, True)
+    run(paths, True, both(quiet_commands, quiet_pip, verbose, quiet, config))
 
 
 @app.command()
 def check(
-    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)]
+    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)],
+    quiet_commands: Annotated[
+        bool,
+        typer.Option(
+            ...,
+            "--quiet-commands",
+            "--qc",
+            help="If passed the output of the formatters and linters will be"
+            " hidden.",
+        ),
+    ] = False,
+    quiet_pip: Annotated[
+        bool,
+        typer.Option(
+            ...,
+            "--quiet-pip",
+            "--qp",
+            help="If passed the output of pip will be hidden.",
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            callback=verbose_callback,
+            help="When passed the logger's threshold will be decreased by 10"
+            " (may be passed multiple times)",
+        ),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option(
+            "--quiet",
+            "-q",
+            callback=quiet_callback,
+            help="When passed the logger's threshold will be increased by 10"
+            " (may be passed multiple times)",
+        ),
+    ] = False,
+    config: Annotated[
+        Optional[pathlib.Path],
+        typer.Option(
+            exists=True, dir_okay=False, help="The config file to use."
+        ),
+    ] = None,
 ) -> None:
     """Check the formatting of your code and run linters."""
-    run(paths, False)
+    run(paths, False, both(quiet_commands, quiet_pip, verbose, quiet, config))
 
 
 def install_pre_commit(git_repository: pathlib.Path) -> None:
@@ -234,11 +359,38 @@ def pre_commit(
     git_repository: Annotated[
         pathlib.Path,
         typer.Option(
-            default_factory=pathlib.Path.cwd, exists=True, file_okay=False
+            default_factory=pathlib.Path.cwd,
+            exists=True,
+            file_okay=False,
+            help="The root directory of the git repository to use. Defaults to"
+            " the current working directory.",
         ),
-    ]
+    ],
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            callback=verbose_callback,
+            help="When passed the logger's threshold will be decreased by 10"
+            " (may be passed multiple times)",
+        ),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option(
+            "--quiet",
+            "-q",
+            callback=quiet_callback,
+            help="When passed the logger's threshold will be increased by 10"
+            " (may be passed multiple times)",
+        ),
+    ] = False,
 ) -> None:
     """Install a pre-commit git hook which will run Lemming."""
+    if verbose and quiet:
+        logger.critical("Verbose and quiet are mutually exclusive!")
+        raise typer.Exit(2)
     install_pre_commit(git_repository)
 
 
@@ -253,62 +405,9 @@ def callback(
             callback=version_callback,
         ),
     ] = False,
-    quiet_commands: Annotated[
-        bool,
-        typer.Option(
-            help="If passed the output of the formatters and linters will be"
-            " hidden.",
-        ),
-    ] = False,
-    quiet_pip: Annotated[
-        bool,
-        typer.Option(
-            help="If passed the output of pip will be hidden.",
-        ),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option(
-            "--verbose",
-            "-v",
-            help="If passed the logger's threshold will be set to debug.",
-        ),
-    ] = False,
-    quiet: Annotated[
-        bool,
-        typer.Option(
-            "--quiet",
-            "-q",
-            callback=quiet_callback,
-            help="When passed the logger's threshold will be increased by 10"
-            " (may be passed multiple times)",
-        ),
-    ] = False,
-    config: Annotated[
-        Optional[pathlib.Path],
-        typer.Option(
-            exists=True, dir_okay=False, help="The config file to use."
-        ),
-    ] = None,
 ) -> None:
-    if verbose:
-        if quiet:
-            logger.critical("Verbose and quiet are mutually exclusive!")
-            raise typer.Exit(2)
-        logger.threshold = mylog.Level.debug
-    if config:
-        config_ = (
-            get_config_pyproject(config)
-            if config.name == "pyproject.toml"
-            else get_config_dot_lemming(config.parent)
-        )
-    else:
-        config_ = get_config(".")
-    global SETTINGS  # noqa: PLW0603
-    SETTINGS = _Settings(
-        what_to_quiet=WhatToQuiet(commands=quiet_commands, pip=quiet_pip),
-        config=config_,
-    )
+    # This function is only here for the version.
+    pass
 
 
 def main() -> None:

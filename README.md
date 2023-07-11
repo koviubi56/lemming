@@ -22,7 +22,7 @@ pip install python-lemming
 
 ## Requirements
 
-Lemming requires Python 3.8
+Lemming requires Python 3.6
 
 ## Usage
 
@@ -66,24 +66,75 @@ You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lem
 
 ## CLI usage
 
-```text
-usage: lemming [-h] [-v] [-q] [--quiet-commands] [--quiet-pip] [-c CONFIG] [-V] {format,check} path
+```bash
+ Usage: lemming [OPTIONS] COMMAND [ARGS]...
 
-Lemming is a tool for formatting and linting code.
+╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --version             -V                                       Print the version of Lemming and exit.                                                              │
+│ --install-completion          [bash|zsh|fish|powershell|pwsh]  Install completion for the specified shell. [default: None]                                         │
+│ --show-completion             [bash|zsh|fish|powershell|pwsh]  Show completion for the specified shell, to copy it or customize the installation. [default: None]  │
+│ --help                                                         Show this message and exit.                                                                         │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ check                        Check the formatting of your code and run linters.                                                                                    │
+│ format                       Format your code and run linters.                                                                                                     │
+│ pre-commit                   Install a pre-commit git hook which will run Lemming.                                                                                 │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
 
-positional arguments:
-  {format,check}        format the code with the formatters, or check the code with the formatters (linters will be ran in all cases)
-  path                  the paths (files and directories) to check. These arguments will be passed to the formatters and linters as arguments where {path} is used
+### Check
 
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         log more information
-  -q, --quiet           log less information. Can be passed multiple times
-  --quiet-commands      don't let ran commands write to stdout and stderr. Use --quiet-pip to quiet `pip`
-  --quiet-pip           don't let pip write to stdout and stderr. Use --quiet-commands to quiet the formatters and linters
-  -c CONFIG, --config CONFIG
-                        the config file to use. If passed all other config files will be ignored
-  -V, --version         print the program's version and exit
+```bash
+ Usage: lemming check [OPTIONS] PATHS...
+
+ Check the formatting of your code and run linters.
+
+╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    paths      PATHS...  [default: None] [required]                                                                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --quiet-commands,--qc                If passed the output of the formatters and linters will be hidden.                         │
+│ --quiet-pip,--qp                     If passed the output of pip will be hidden.                                                │
+│ --verbose              -v            When passed the logger's threshold will be decreased by 10 (may be passed multiple times)  │
+│ --quiet                -q            When passed the logger's threshold will be increased by 10 (may be passed multiple times)  │
+│ --config                       FILE  The config file to use. [default: None]                                                    │
+│ --help                               Show this message and exit.                                                                │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+### Format
+
+```bash
+ Usage: lemming format [OPTIONS] PATHS...
+
+ Format your code and run linters.
+
+╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    paths      PATHS...  [default: None] [required]                                                                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --quiet-commands,--qc                If passed the output of the formatters and linters will be hidden.                         │
+│ --quiet-pip,--qp                     If passed the output of pip will be hidden.                                                │
+│ --verbose              -v            When passed the logger's threshold will be decreased by 10 (may be passed multiple times)  │
+│ --quiet                -q            When passed the logger's threshold will be increased by 10 (may be passed multiple times)  │
+│ --config                       FILE  The config file to use. [default: None]                                                    │
+│ --help                               Show this message and exit.                                                                │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+### Pre-commit
+
+```bash
+ Usage: lemming pre-commit [OPTIONS]
+
+ Install a pre-commit git hook which will run Lemming.
+
+╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --git-repository          DIRECTORY  The root directory of the git repository to use. Defaults to the current working directory. [default: (dynamic)]      │
+│ --verbose         -v                 When passed the logger's threshold will be decreased by 10 (may be passed multiple times)                             │
+│ --quiet           -q                 When passed the logger's threshold will be increased by 10 (may be passed multiple times)                             │
+│ --help                               Show this message and exit.                                                                                           │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ## Support

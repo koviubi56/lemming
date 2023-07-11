@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## Added
+
+- **Added support for python 3.6**
+
+## Changed
+
+- The pre-commit hook will not run with `--quiet`.
+- Updated the settings system in `__main__.py`.
+
+## Fixed
+
+- **Fixed issue with command line options. They had to be put before the subcommand, but now they have to be put after.**
+
 ## [0.5.1] - 2023-06-23
 
 ## Fixed

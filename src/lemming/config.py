@@ -22,7 +22,15 @@ import pathlib
 import shlex
 import subprocess
 import sys
-from typing import Iterable, List, Mapping, MutableSequence, Optional, Union
+from typing import (
+    Iterable,
+    List,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Union,
+    cast,
+)
 
 from confz import ConfZ, ConfZFileSource
 from confz.exceptions import ConfZFileException
@@ -148,11 +156,19 @@ class FormatterOrLinter(ConfZ):
 
         splitted = shlex.split(command, posix=os.name != "nt")
         logger.debug(f"Running command {splitted!r}")
-        completed_process = subprocess.run(
-            splitted,
-            check=False,
-            capture_output=quiet,
-            shell=False,  # noqa: S603
+        quiet_kwargs = (
+            {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+            if quiet
+            else {}
+        )
+        completed_process = cast(
+            subprocess.CompletedProcess[str],
+            subprocess.run(
+                splitted,
+                check=False,
+                shell=False,  # noqa: S603
+                **quiet_kwargs,
+            ),
         )
         exit_status = completed_process.returncode
         if exit_status == 0:

@@ -57,6 +57,9 @@ fixable = [
 [tool.ruff.flake8-quotes]
 inline-quotes = "double"
 
+[tool.lemming]
+fail_fast = false
+
 [[tool.lemming.formatters]]
 packages = ["black"]
 format_command = "{pyexe} -m black -l 79 {path}"
