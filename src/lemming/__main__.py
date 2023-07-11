@@ -74,9 +74,7 @@ class Settings:
     only: Optional[List[str]]
 
     def should_run(self, name: str) -> bool:
-        if self.only is None:
-            return True
-        return name in self.only
+        return True if self.only is None else name in self.only
 
 
 class Timer:
