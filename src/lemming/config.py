@@ -66,8 +66,8 @@ def assert_dict_keys(
     Assert that `dictionary`'s keys are in `keys`
 
     Args:
-        dictionary (Iterable[Any, Any]): The dictionary to check.
-        keys (MutableSequence[Any]): The keys that are allowed.
+        dictionary (Iterable[T]): The dictionary to check.
+        keys (MutableSequence[T]): The keys that are allowed.
 
     Raises:
         ValueError: If a key is found within `dictionary` but not within
@@ -92,7 +92,7 @@ class FormatterOrLinter(pydantic.BaseModel):
     An ABC for formatters and linters.
 
     Args:
-        packages (List[str]): The packages' name (optionally versions
+        packages (List[str]): The packages' names (optionally versions
         with "==x.y.z") to install with pip.
     """
 
@@ -136,10 +136,6 @@ class FormatterOrLinter(pydantic.BaseModel):
     ) -> bool:
         """
         Run command `command`.
-        Also replaces these:
-        - `{pyexe}` -> `sys.executable`
-
-        In `self.args` `{path}` be replaced by `paths_to_check`.
 
         Args:
             command (str): The command to run.
@@ -194,6 +190,21 @@ class FormatterOrLinter(pydantic.BaseModel):
 
 
 class Formatter(FormatterOrLinter):
+    """
+    A formatter.
+
+    Args:
+        packages (List[str]): The packages' names (optionally versions
+        with "==x.y.z") to install with pip.
+        format_command (str): The command to use to format the code (with the
+        `format` subcommand)
+        check_command (Optional[str], optional): The command to use to check
+        the code (with the `check` subcommand). Defaults to None.
+        allow_nonzero_on_format (bool, optional): Whether or not to allow the
+        formatter to return a non-zero exit status when formatting. Defaults
+        to False.
+    """
+
     format_command: str
     check_command: Optional[str] = None
     allow_nonzero_on_format: bool = False
@@ -203,6 +214,16 @@ class Formatter(FormatterOrLinter):
         paths_to_check: Iterable[pathlib.Path],
         what_to_quiet: WhatToQuiet,
     ) -> bool:
+        """
+        Format the code.
+
+        Args:
+            paths_to_check (Iterable[pathlib.Path]): The paths to format.
+            what_to_quiet (WhatToQuiet): What to quiet.
+
+        Returns:
+            bool: `exit_status == 0`
+        """
         install_success = self.install(what_to_quiet.pip)
         if not install_success:
             logger.error(
@@ -233,6 +254,16 @@ class Formatter(FormatterOrLinter):
         paths_to_check: Iterable[pathlib.Path],
         what_to_quiet: WhatToQuiet,
     ) -> bool:
+        """
+        Check the code.
+
+        Args:
+            paths_to_check (Iterable[pathlib.Path]): Paths to check.
+            what_to_quiet (WhatToQuiet): What to quiet.
+
+        Returns:
+            bool: `exit_status == 0`
+        """
         if not self.check_command:
             logger.warning(
                 f"The formatter {self.packages} does NOT have a check_command!"
@@ -265,6 +296,17 @@ class Formatter(FormatterOrLinter):
 
 
 class Linter(FormatterOrLinter):
+    """
+    A linter.
+
+    Args:
+        packages (List[str]): The packages' names (optionally versions
+        with "==x.y.z") to install with pip.
+        command (str): The command to use to lint the code
+        run_first (bool, optional): Whether or not to run this linter before
+        all other linters and formatters.
+    """
+
     command: str
     run_first: bool = False
 
@@ -273,12 +315,23 @@ class Linter(FormatterOrLinter):
         paths_to_check: Iterable[pathlib.Path],
         what_to_quiet: WhatToQuiet,
     ) -> bool:
+        """
+        Lint the code.
+
+        Args:
+            paths_to_check (Iterable[pathlib.Path]): Paths to lint.
+            what_to_quiet (WhatToQuiet): What to quiet.
+
+        Returns:
+            bool: `exit_status == 0`
+        """
         install_success = self.install(what_to_quiet.pip)
         if not install_success:
             logger.error(
                 f"Could not install linter {self.packages}! See"
                 " pip's output for more information."
             )
+            return False
 
         success = self.run_command(
             self.command, paths_to_check, what_to_quiet.commands
@@ -294,24 +347,70 @@ class Linter(FormatterOrLinter):
 
 
 class Config(pydantic.BaseModel):
+    """
+    The configuration.
+
+    Args:
+        formatters (List[Formatter], optional): The formatters. Default
+        factory is list.
+        linters (List[Linter], optional): The linters. Default factory is list.
+        fail_fast (bool, optional): Whether or not to immediately quit when a
+        formatter or linter fails.
+    """
+
     formatters: List[Formatter] = pydantic.Field(default_factory=list)
     linters: List[Linter] = pydantic.Field(default_factory=list)
     fail_fast: bool = True
 
     def get_first_linters(self) -> List[Linter]:
+        """
+        Get the first linters.
+
+        Returns:
+            List[Linter]: Get linters, where `linter.run_first is True`
+        """
         return [linter for linter in self.linters if linter.run_first]
 
     def get_other_linters(self) -> List[Linter]:
+        """
+        Get the other linters.
+
+        Returns:
+            List[Linter]: Get linters, where `linter.run_first is False`
+        """
         return [linter for linter in self.linters if not linter.run_first]
 
 
-def get_config_dot_lemming(folder: pathlib.Path) -> Config:
+def get_config_dot_lemming(file: pathlib.Path) -> Config:
+    """
+    Get the config from `file`.
+
+    Args:
+        file (pathlib.Path): The config file to read from. Must use
+        the `.lemming.toml` syntax (not the `pyproject.toml` syntax).
+
+    Returns:
+        Config: The configuration.
+    """
     return Config.model_validate(
-        tomllib.loads((folder / CONFIG_FILE_NAME).read_text(encoding="utf-8"))
+        tomllib.loads(file.read_text(encoding="utf-8"))
     )
 
 
 def get_config_pyproject(pyproject: pathlib.Path) -> Config:
+    """
+    Get the config from `pyproject`.
+
+    Args:
+        pyproject (pathlib.Path): The config file to read from. Must use the
+        `pyproject.toml` syntax (not the `.lemming.toml` syntax).
+
+    Raises:
+        ValueError: If the config file does not contain a `tool.lemming` key.
+
+    Returns:
+        Config: The configuration.
+    """
     config_text = pyproject.read_text(encoding="utf-8")
     pyproject_config = tomllib.loads(config_text)
     try:
@@ -322,6 +421,19 @@ def get_config_pyproject(pyproject: pathlib.Path) -> Config:
 
 
 def get_config(_folder: Union[os.PathLike[str], str]) -> Config:
+    """
+    Get the configuration from `_folder` or a parent folder recursively.
+
+    Args:
+        _folder (Union[os.PathLike[str], str]): The folder to use.
+
+    Raises:
+        FileNotFoundError: If no `pyproject.toml` nor `.lemming.toml` file was
+        found in `_folder` and its parents.
+
+    Returns:
+        Config: The configuration.
+    """
     folder = pathlib.Path(_folder)
     config_file = folder / CONFIG_FILE_NAME
     if config_file.exists():

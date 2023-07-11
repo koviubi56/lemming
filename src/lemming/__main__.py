@@ -57,12 +57,23 @@ app = typer.Typer(no_args_is_help=True)
 
 
 class Settings(TypedDict):
+    """
+    The settings.
+
+    Args:
+        what_to_quiet (WhatToQuiet): What to quiet.
+        config (Config): The configuration.
+    """
+
     what_to_quiet: WhatToQuiet
     config: Config
 
 
 class Timer:
+    """A timer."""
+
     def __init__(self) -> None:
+        """Create a Timer instance."""
         self.start = None
         self.time = None
 
@@ -78,6 +89,20 @@ class Timer:
 def run_linter(
     linter: Linter, paths: List[pathlib.Path], settings: Settings
 ) -> bool:
+    """
+    Run `linter`.
+
+    Args:
+        linter (Linter): The linter to run.
+        paths (List[pathlib.Path]): The paths to lint.
+        settings (Settings): The settings.
+
+    Raises:
+        typer.Exit: If the linter failed and fail fast is True.
+
+    Returns:
+        bool: `exit_status == 0`
+    """
     with logger.ctxmgr:
         with Timer() as linter_timer:
             success = linter.run(paths, settings["what_to_quiet"])
@@ -95,6 +120,16 @@ def run_linter(
 
 
 def linter_first(paths: List[pathlib.Path], settings: Settings) -> bool:
+    """
+    Run the first linters.
+
+    Args:
+        paths (List[pathlib.Path]): The paths to lint.
+        settings (Settings): The settings.
+
+    Returns:
+        bool: Whether or not all linters successfully ran.
+    """
     logger.info("Running first linters")
     return_value = True
     with logger.ctxmgr:
@@ -114,6 +149,21 @@ def run_formatter(
     format_: bool,
     settings: Settings,
 ) -> bool:
+    """
+    Run `formatter`.
+
+    Args:
+        formatter (Formatter): The formatter to run.
+        paths (List[pathlib.Path]): The paths to format/check.
+        format_ (bool): Whether or not to format or check.
+        settings (Settings): The settings.
+
+    Raises:
+        typer.Exit: If the formatter failed and fail fast is True.
+
+    Returns:
+        bool: `exit_status == 0`
+    """
     with logger.ctxmgr:
         with Timer() as formatter_timer:
             if format_:
@@ -135,6 +185,17 @@ def run_formatter(
 def formatter(
     format_: bool, paths: List[pathlib.Path], settings: Settings
 ) -> bool:
+    """
+    Run all formatters.
+
+    Args:
+        format_ (bool): Whether or not to format or check.
+        paths (List[pathlib.Path]): The paths to format/check.
+        settings (Settings): The settings.
+
+    Returns:
+        bool: Whether or not all formatters successfully ran.
+    """
     logger.info("Running formatters")
     return_value = True
     with logger.ctxmgr:
@@ -149,6 +210,16 @@ def formatter(
 
 
 def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
+    """
+    Run all other linters.
+
+    Args:
+        paths (List[pathlib.Path]): The paths to lint.
+        settings (Settings): The settings.
+
+    Returns:
+        bool: Whether or not all other linters successfully ran.
+    """
     logger.info("Running other linters")
     return_value = True
     with logger.ctxmgr:
@@ -163,6 +234,17 @@ def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
 
 
 def run(paths: List[pathlib.Path], format_: bool, settings: Settings) -> None:
+    """
+    Run all linters and formatters.
+
+    Args:
+        paths (List[pathlib.Path]): The paths to check.
+        format_ (bool): Whether or not to format or check.
+        settings (Settings): The settings.
+
+    Raises:
+        typer.Exit: If any formatter or linter failed and fail fast is False.
+    """
     with Timer() as all_timer:
         success = True
         if linter_first(paths, settings) is False:
@@ -185,21 +267,52 @@ def run(paths: List[pathlib.Path], format_: bool, settings: Settings) -> None:
 
 
 def quiet_callback(value: bool) -> bool:
+    """
+    Increase the logger's threshold by 10 if `value`.
+
+    Args:
+        value (bool): Value.
+
+    Returns:
+        bool: `value`
+    """
     if value:
         logger.threshold += 10
     return value
 
 
 def verbose_callback(value: bool) -> bool:
+    """
+    Decrease the logger's threshold by 10 if `value`.
+
+    Args:
+        value (bool): Value.
+
+    Returns:
+        bool: `value`
+    """
     if value:
         logger.threshold -= 10
     return value
 
 
-def version_callback(value: bool) -> None:
+def version_callback(value: bool) -> bool:
+    """
+    Print the version and exit if `value`.
+
+    Raises:
+        typer.Exit: if `value`
+
+    Args:
+        value (bool): Value.
+
+    Returns:
+        bool: `value`
+    """
     if value:
         print(__version__)
         raise typer.Exit(0)
+    return value
 
 
 def both(
@@ -209,6 +322,26 @@ def both(
     quiet: bool,
     config: Optional[pathlib.Path],
 ) -> Settings:
+    """
+    Create the settings, and do some stuff with the given options.
+
+    Args:
+        quiet_commands (bool): Whether or not to stop the commands from
+        writing to stdout and stderr.
+        quiet_pip (bool): Whether ot not to stop pip from writing to stdout
+        and stderr
+        verbose (bool): Decrease the loggers threshold by 10 (done by the
+        callback).
+        quiet (bool): Increase the loggers threshold by 10 (done by the
+        callback).
+        config (Optional[pathlib.Path]): The configuration to use or None.
+
+    Raises:
+        typer.Exit: If both verbose and quiet is passed.
+
+    Returns:
+        Settings: The settings.
+    """
     if verbose and quiet:
         logger.critical("Verbose and quiet are mutually exclusive!")
         raise typer.Exit(2)
@@ -333,6 +466,19 @@ def check(
 
 
 def install_pre_commit(git_repository: pathlib.Path) -> None:
+    """
+    Install the pre-commit hook script to
+    `git_repository/.git/hooks/pre-commit`
+
+    Args:
+        git_repository (pathlib.Path): The root directory of the git
+        repository.
+
+    Raises:
+        typer.Exit: If `git_repository` doesn't exist
+        typer.Exit: If `git_repository/.git` doesn't exist
+        typer.Exit: If writing to the pre-commit file failed.
+    """
     if not git_repository.exists():
         logger.critical(f"Directory {git_repository} does not exist!")
         raise typer.Exit(1)
@@ -411,6 +557,7 @@ def callback(
 
 
 def main() -> None:
+    """Main."""
     return app()
 
 
