@@ -10,6 +10,7 @@ select = ["ALL"]
 ignore = [
     "ANN101",
     "ANN102",
+    "ANN401",
     "COM",
     "D",
     "EM102",
@@ -69,8 +70,8 @@ format_command = "{pyexe} -m setup_cfg_fmt --include-version-classifiers"
 
 [[tool.lemming.formatters]]
 packages = ["ruff"]
-format_command = "{pyexe} -m ruff check . --show-source --fix -n"
-check_command = "{pyexe} -m ruff check . --show-source --show-fixes -n"
+format_command = "{pyexe} -m ruff check --show-source --fix -n {path}"
+check_command = "{pyexe} -m ruff check --show-source --show-fixes -n {path}"
 
 [[tool.lemming.linters]]
 packages = ["pyroma"]

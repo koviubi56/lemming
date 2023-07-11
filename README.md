@@ -41,15 +41,17 @@ The config looks like this:
 fail_fast = false  # OPTIONAL, whether or not immediately quit in case of an error
 
 [[formatters]]
+name = "some_example"  # OPTIONAL, used to identify this formatter. Defaults to packages[0]
 packages = ["example"]  # REQUIRED, the package(s) to install with pip (might include versions with "==x.y.z")
 format_command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to format the code ({pyexe} will be replaced with the python executable, {path} with the path passed to Lemming (usually the current working directory: "."))
 check_command = "{pyexe} -m example --check {path}"  # OPTIONAL, the command to run to check the code (stuff will be replaced just like in format_command)
 allow_nonzero_on_format = true  # OPTIONAL, if true it is allowed for the format_command to return a non-zero exit status
 
 [[linters]]
+name = "other_example"  # OPTIONAL, used to identify this linter. Defaults to packages[0]
 packages = ["example"]  # REQUIRED, same as for formatters
 command = "{pyexe} -m example {path}"  # REQUIRED, the command to run to lint the code (stuff will be replaced just like in format_command)
-run_first = true  # OPTIONAL, if true this linter will be ran BEFORE formatters, and linters with this being false. Defaults to false.
+run_first = true  # OPTIONAL, if true this linter will be ran BEFORE formatters, and other linters. Defaults to false.
 ```
 
 ### 2. Run Lemming
@@ -97,7 +99,8 @@ You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lem
 │ --quiet-pip,--qp                     If passed the output of pip will be hidden.                                                │
 │ --verbose              -v            When passed the logger's threshold will be decreased by 10 (may be passed multiple times)  │
 │ --quiet                -q            When passed the logger's threshold will be increased by 10 (may be passed multiple times)  │
-│ --config                       FILE  The config file to use. [default: None]                                                    │
+│ --config                       FILE  The config file to use [default: None]                                                     │
+│ --only                         TEXT  Only run these formatters/linters (may be passed multiple times) [default: None]           │
 │ --help                               Show this message and exit.                                                                │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
@@ -105,7 +108,7 @@ You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lem
 ### Format
 
 ```bash
- Usage: lemming format [OPTIONS] PATHS...
+Usage: lemming format [OPTIONS] PATHS...
 
  Format your code and run linters.
 
@@ -118,6 +121,7 @@ You can also use Lemming as a GitHub workflow, like [this](.github/workflows/lem
 │ --verbose              -v            When passed the logger's threshold will be decreased by 10 (may be passed multiple times)  │
 │ --quiet                -q            When passed the logger's threshold will be increased by 10 (may be passed multiple times)  │
 │ --config                       FILE  The config file to use. [default: None]                                                    │
+│ --only                         TEXT  Only run these formatters/linters (may be passed multiple times) [default: None]           │
 │ --help                               Show this message and exit.                                                                │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```

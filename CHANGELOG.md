@@ -8,11 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Added
 
+- **! Added the `--only=<name>` option, which will only run that specific formatter/linter.**
+- **Added names to formatters and linters. #26**
 - **Added support for python 3.6**
 
 ## Changed
 
-- **Use `pydantic` instead of `confz`.**
+- **Use `pydantic` instead of `confz`. #24**
 - The pre-commit hook will not run with `--quiet`.
 - Updated the settings system in `__main__.py`.
 
