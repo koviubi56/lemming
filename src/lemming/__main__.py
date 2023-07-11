@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import pathlib
 import sys
 import time
-from typing import Optional
+from typing import List, Optional
 
 import typer
 from typing_extensions import Annotated, Self, TypedDict
@@ -76,7 +76,7 @@ class Timer:
 
 
 def run_linter(
-    linter: Linter, paths: list[pathlib.Path], settings: Settings
+    linter: Linter, paths: List[pathlib.Path], settings: Settings
 ) -> bool:
     with logger.ctxmgr:
         with Timer() as linter_timer:
@@ -94,7 +94,7 @@ def run_linter(
         return True
 
 
-def linter_first(paths: list[pathlib.Path], settings: Settings) -> bool:
+def linter_first(paths: List[pathlib.Path], settings: Settings) -> bool:
     logger.info("Running first linters")
     return_value = True
     with logger.ctxmgr:
@@ -110,7 +110,7 @@ def linter_first(paths: list[pathlib.Path], settings: Settings) -> bool:
 
 def run_formatter(
     formatter: Formatter,
-    paths: list[pathlib.Path],
+    paths: List[pathlib.Path],
     format_: bool,
     settings: Settings,
 ) -> bool:
@@ -133,7 +133,7 @@ def run_formatter(
 
 
 def formatter(
-    format_: bool, paths: list[pathlib.Path], settings: Settings
+    format_: bool, paths: List[pathlib.Path], settings: Settings
 ) -> bool:
     logger.info("Running formatters")
     return_value = True
@@ -148,7 +148,7 @@ def formatter(
         return return_value
 
 
-def linter_other(paths: list[pathlib.Path], settings: Settings) -> bool:
+def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
     logger.info("Running other linters")
     return_value = True
     with logger.ctxmgr:
@@ -162,7 +162,7 @@ def linter_other(paths: list[pathlib.Path], settings: Settings) -> bool:
         return return_value
 
 
-def run(paths: list[pathlib.Path], format_: bool, settings: Settings) -> None:
+def run(paths: List[pathlib.Path], format_: bool, settings: Settings) -> None:
     with Timer() as all_timer:
         success = True
         if linter_first(paths, settings) is False:
@@ -228,7 +228,7 @@ def both(
 
 @app.command("format")
 def format_(
-    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)],
+    paths: Annotated[List[pathlib.Path], typer.Argument(exists=True)],
     quiet_commands: Annotated[
         bool,
         typer.Option(
@@ -281,7 +281,7 @@ def format_(
 
 @app.command()
 def check(
-    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)],
+    paths: Annotated[List[pathlib.Path], typer.Argument(exists=True)],
     quiet_commands: Annotated[
         bool,
         typer.Option(

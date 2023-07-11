@@ -25,16 +25,14 @@ import sys
 from typing import (
     Iterable,
     List,
-    Mapping,
     MutableSequence,
     Optional,
     Union,
     cast,
 )
 
-from confz import ConfZ, ConfZFileSource
-from confz.exceptions import ConfZFileException
-from typing_extensions import NamedTuple, Self, TypeVar
+import pydantic
+from typing_extensions import NamedTuple, TypeVar
 
 from . import logger
 
@@ -89,7 +87,7 @@ def assert_dict_keys(
             keys.remove(key)
 
 
-class FormatterOrLinter(ConfZ):
+class FormatterOrLinter(pydantic.BaseModel):
     """
     An ABC for formatters and linters.
 
@@ -98,7 +96,6 @@ class FormatterOrLinter(ConfZ):
         with "==x.y.z") to install with pip.
     """
 
-    # it's actually Iterable, but that introduces some bugs
     packages: List[str]
 
     def replace_command(
@@ -266,19 +263,6 @@ class Formatter(FormatterOrLinter):
             )
         return success
 
-    @classmethod
-    def from_dict(cls, dict_: Mapping[str, Union[str, bool]]) -> Self:
-        assert_dict_keys(
-            dict_,
-            [
-                "packages",
-                "format_command",
-                "check_command",
-                "allow_nonzero_on_format",
-            ],
-        )
-        return cls(**dict_)
-
 
 class Linter(FormatterOrLinter):
     command: str
@@ -308,20 +292,10 @@ class Linter(FormatterOrLinter):
             )
         return success
 
-    @classmethod
-    def from_dict(cls, dict_: Mapping[str, Union[str, bool]]) -> Self:
-        assert_dict_keys(
-            dict_,
-            ["packages", "command", "run_first"],
-        )
-        return cls(**dict_)
 
-
-class Config(ConfZ):
-    # we should be safe with mutable default arguments
-    formatters: List[Formatter] = []  # noqa: RUF012
-    linters: List[Linter] = []  # noqa: RUF012
-    # ^ also modify within read_config_file()
+class Config(pydantic.BaseModel):
+    formatters: List[Formatter] = pydantic.Field(default_factory=list)
+    linters: List[Linter] = pydantic.Field(default_factory=list)
     fail_fast: bool = True
 
     def get_first_linters(self) -> List[Linter]:
@@ -332,7 +306,9 @@ class Config(ConfZ):
 
 
 def get_config_dot_lemming(folder: pathlib.Path) -> Config:
-    return Config(ConfZFileSource(file=".lemming.toml", folder=folder))
+    return Config.parse_obj(
+        tomllib.loads((folder / CONFIG_FILE_NAME).read_text(encoding="utf-8"))
+    )
 
 
 def get_config_pyproject(pyproject: pathlib.Path) -> Config:
@@ -342,20 +318,18 @@ def get_config_pyproject(pyproject: pathlib.Path) -> Config:
         lemming_config = pyproject_config["tool"]["lemming"]
     except KeyError as exception:
         raise CONFIG_HAS_NO_LEMMING_STUFF from exception
-    return Config(**lemming_config)
+    return Config.parse_obj(lemming_config)
 
 
 def get_config(_folder: Union[os.PathLike[str], str]) -> Config:
     folder = pathlib.Path(_folder)
-    try:
-        # try .lemming.toml
-        return get_config_dot_lemming(folder)
-    except ConfZFileException:
-        # try pyproject.toml
-        pyproject = folder / "pyproject.toml"
-        if not pyproject.exists():
-            # recursion... recursion recursion...
-            if folder.parent == folder:
-                raise CONFIG_FILE_NOT_FOUND_EXC from None
-            return get_config(folder.parent)
+    config_file = folder / CONFIG_FILE_NAME
+    if config_file.exists():
+        return get_config_dot_lemming(config_file)
+    pyproject = folder / "pyproject.toml"
+    if pyproject.exists():
         return get_config_pyproject(pyproject)
+    # recursion... recursion recursion...
+    if folder.parent == folder:
+        raise CONFIG_FILE_NOT_FOUND_EXC from None
+    return get_config(folder.parent)

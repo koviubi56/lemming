@@ -75,3 +75,7 @@ check_command = "{pyexe} -m ruff check . --show-source --show-fixes -n"
 [[tool.lemming.linters]]
 packages = ["pyroma"]
 command = "{pyexe} -m pyroma {path}"
+
+[[tool.lemming.linters]]
+packages = ["vermin"]
+command = "vermin --target=3.7 --eval-annotations --backport typing --backport typing_extensions -vv src"

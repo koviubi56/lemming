@@ -22,7 +22,7 @@ pip install python-lemming
 
 ## Requirements
 
-Lemming requires Python 3.6
+Lemming requires Python 3.7
 
 ## Usage
 
