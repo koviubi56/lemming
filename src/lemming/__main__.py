@@ -44,7 +44,7 @@ PRE_COMMIT_FILE = """#!/bin/sh
 set -euo pipefail
 PYTHON='{}'
 
-if [[ -n $LEMMING_VERBOSE ]]; then
+if [[ -n "${LEMMING_VERBOSE:-}" ]]; then
     exec $PYTHON -m lemming format --verbose $(pwd)
     ret_code=$?
 else
