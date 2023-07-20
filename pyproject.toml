@@ -14,6 +14,7 @@ ignore = [
     "COM",
     "D",
     "EM102",
+    "FA",
     "FBT",
     "T",
     "TRY003",
@@ -79,4 +80,4 @@ command = "{pyexe} -m pyroma {path}"
 
 [[tool.lemming.linters]]
 packages = ["vermin"]
-command = "vermin --target=3.7 --eval-annotations --backport typing --backport typing_extensions -vv src"
+command = "vermin --target=3.7 --eval-annotations --backport typing -vv src"

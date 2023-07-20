@@ -74,7 +74,7 @@ class Settings:
     only: Optional[List[str]]
 
     def should_run(self, name: str) -> bool:
-        if self.only is None:
+        if not self.only:
             return True
         return name in self.only
 
@@ -536,7 +536,7 @@ def install_pre_commit(git_repository: pathlib.Path) -> None:
         )
     logger.info(f"Creating pre-commit git hook (it will use {sys.executable})")
     try:
-        pre_commit.write_text(PRE_COMMIT_FILE.format(sys.executable))
+        pre_commit.write_text(PRE_COMMIT_FILE.replace("{}", sys.executable))
     except OSError as exception:
         logger.critical("Could not write pre-commit file!", True)
         raise typer.Exit(1) from exception
