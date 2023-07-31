@@ -1,9 +1,51 @@
 [build-system]
-requires = ["setuptools>=42.0", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "python_lemming"
+description = "Lemming is a tool for formatting and linting code."
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Koviubi56", email = "koviubi56@duck.com" }]
+keywords = ["lemming", "format", "formatter", "lint", "linting", "linter"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Typing :: Typed",
+]
+dynamic = ["version", "dependencies"]
+
+[tool.setuptools.dynamic]
+version = { attr = "lemming.__version__" }
+dependencies = { file = "requirements.txt" }
+
+[tool.setuptools.package-data]
+lemming = ["py.typed"]
+
+[project.urls]
+Homepage = "https://github.com/koviubi56/lemming"
+
+[project.scripts]
+lemming = "lemming.__main__:main"
 
 [tool.isort]
 profile = "black"
+
 
 [tool.ruff]
 select = ["ALL"]

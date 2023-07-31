@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.2] - 2023-07-31
+
+### Changed
+
+- Moved metadata from `setup.cfg` to `pyproject.toml`
+
 ## [0.6.1] - 2023-07-20
 
 ### Changed
