@@ -23,10 +23,10 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip
-      - name: Set up Python 3.11
+      - name: Set up Python 3
         uses: actions/setup-python@main
         with:
-          python-version: "3.11"
+          python-version: "3"
       - name: Install Lemming
         # ! Hey! If you're copy-pasting this file, then choose the the commented out command
         run: |
