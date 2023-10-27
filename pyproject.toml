@@ -102,14 +102,14 @@ fixable = [
 inline-quotes = "double"
 
 [[tool.lemming.formatters]]
-packages = ["black"]
-format_command = "{pyexe} -m black -l 79 {path}"
-check_command = "{pyexe} -m black -l 79 --check --extend-exclude .*venv.* {path}"
-
-[[tool.lemming.formatters]]
 packages = ["ruff"]
 format_command = "{pyexe} -m ruff check --show-source --fix -n {path}"
 check_command = "{pyexe} -m ruff check --show-source --show-fixes -n {path}"
+
+[[tool.lemming.formatters]]
+packages = ["ruff"]
+format_command = "{pyexe} -m ruff format {path}"
+check_command = "{pyexe} -m ruff format --check {path}"
 
 [[tool.lemming.linters]]
 packages = ["pyroma"]
