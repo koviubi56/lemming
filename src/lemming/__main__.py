@@ -74,6 +74,15 @@ class Settings:
     only: Optional[List[str]]
 
     def should_run(self, name: str) -> bool:
+        """
+        Should the formatter/linter with that name run?
+
+        Args:
+            name (str): The formatter's/linter's name
+
+        Returns:
+            bool: True if it should run, False otherwise
+        """
         if not self.only:
             return True
         return name in self.only
@@ -510,8 +519,7 @@ def check(
 
 def install_pre_commit(git_repository: pathlib.Path) -> None:
     """
-    Install the pre-commit hook script to
-    `git_repository/.git/hooks/pre-commit`
+    Install the pre-commit hook script.
 
     Args:
         git_repository (pathlib.Path): The root directory of the git
@@ -595,8 +603,7 @@ def callback(
         ),
     ] = False,
 ) -> None:
-    # This function is only here for the version.
-    pass
+    """This function is only here for the version."""
 
 
 def main() -> None:

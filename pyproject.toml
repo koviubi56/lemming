@@ -46,22 +46,15 @@ lemming = "lemming.__main__:main"
 [tool.isort]
 profile = "black"
 
-
 [tool.ruff]
 select = ["ALL"]
-ignore = [
-    "ANN101",
-    "ANN102",
-    "ANN401",
-    "COM",
-    "D",
-    "EM102",
-    "FA",
-    "FBT",
-    "T",
-    "TRY003",
+ignore = ["ANN101", "COM812", "D105", "D212", "FA100", "FBT"]
+per-file-ignores = { "__main__.py" = [
     "PLR0913",
-]
+    "T201",
+], "setup.py" = [
+    "D100",
+] }
 line-length = 79
 target-version = "py38"
 
@@ -100,6 +93,10 @@ fixable = [
 
 [tool.ruff.flake8-quotes]
 inline-quotes = "double"
+
+[tool.ruff.pydocstyle]
+convention = "google"
+ignore-decorators = ["typing.overload"]
 
 [[tool.lemming.formatters]]
 packages = ["ruff"]

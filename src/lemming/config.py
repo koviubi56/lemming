@@ -24,7 +24,6 @@ import shlex
 import subprocess
 import sys
 from typing import (
-    Any,
     Iterable,
     List,
     Optional,
@@ -56,6 +55,8 @@ T = TypeVar("T")
 
 
 class WhatToQuiet(NamedTuple):
+    """What things should not be able to write to stdout and stderr."""
+
     commands: bool
     pip: bool
 
@@ -75,7 +76,7 @@ class FormatterOrLinter(pydantic.BaseModel):
     packages: List[str]
 
     @pydantic.model_validator(mode="after")
-    def _validate_name(self, _: Any) -> Self:
+    def _validate_name(self, _: object) -> Self:
         if self.name == "":
             try:
                 self.name = self.packages[0]
