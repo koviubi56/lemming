@@ -21,6 +21,7 @@ Lemming is an open source project and we love to receive contributions from our 
 - Please, **don't** open an issue for questions. Ask it in the discussions tab!
 - Make sure to put an X to the square brackets at the end of the issue, if you read the contributing guidelines, and the code of conduct. **If you don't put an X into all of them, your issue will be closed!**
 - Don't forget to add an entry to the changelog. Unless you know what you are doing, put it in the Unreleased section. For more information, see the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+- Please follow our [code style](https://github.com/koviubi56/koviubi56/blob/main/code_style.md).
 
 ## How to file a bug report?
 
