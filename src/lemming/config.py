@@ -140,7 +140,7 @@ class FormatterOrLinter(pydantic.BaseModel):
         command = self.replace_command(command, paths_to_check)
 
         splitted = shlex.split(command, posix=os.name != "nt")
-        logger.debug(f"Running command {splitted!r}")
+        logger.info(f"Running command {splitted!r}")
         quiet_kwargs = (
             {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
             if quiet
@@ -175,7 +175,7 @@ class FormatterOrLinter(pydantic.BaseModel):
             bool: `exit_status == 0`
         """
         logger.info(f"Installing {self.packages}")
-        with logger.ctxmgr:
+        with logger.indent:
             return self.run_command(
                 "{pyexe} -m pip install -U {packages}", [], quiet
             )

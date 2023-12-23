@@ -21,5 +21,5 @@ __all__ = ["__version__", "logger"]
 __version__ = "0.6.2"
 import mylog
 
-logger = mylog.root.get_child("lemming")
-logger.threshold = mylog.Level.info
+logger = mylog.root.create_child("lemming")
+logger.threshold = mylog.Level.INFO

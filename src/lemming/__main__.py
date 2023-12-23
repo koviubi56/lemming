@@ -122,7 +122,7 @@ def run_linter(
     Returns:
         bool: `exit_status == 0`
     """
-    with logger.ctxmgr:
+    with logger.indent:
         with Timer() as linter_timer:
             success = linter.run(paths, settings.what_to_quiet)
             if not success:
@@ -151,7 +151,7 @@ def linter_first(paths: List[pathlib.Path], settings: Settings) -> bool:
     """
     logger.info("Running first linters")
     return_value = True
-    with logger.ctxmgr:
+    with logger.indent:
         with Timer() as linters_timer:
             for linter in settings.config.get_first_linters():
                 if not settings.should_run(linter.name):
@@ -186,7 +186,7 @@ def run_formatter(
     Returns:
         bool: `exit_status == 0`
     """
-    with logger.ctxmgr:
+    with logger.indent:
         with Timer() as formatter_timer:
             if format_:
                 success = formatter.run_format(paths, settings.what_to_quiet)
@@ -218,7 +218,7 @@ def formatter(
     """
     logger.info("Running formatters")
     return_value = True
-    with logger.ctxmgr:
+    with logger.indent:
         with Timer() as formatters_timer:
             for formatter in settings.config.formatters:
                 if not settings.should_run(formatter.name):
@@ -245,7 +245,7 @@ def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
     """
     logger.info("Running other linters")
     return_value = True
-    with logger.ctxmgr:
+    with logger.indent:
         with Timer() as linters_timer:
             for linter in settings.config.get_other_linters():
                 if not settings.should_run(linter.name):
