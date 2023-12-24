@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "python_lemming"
 description = "Lemming is a tool for formatting and linting code."
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Koviubi56", email = "koviubi56@duck.com" }]
 keywords = ["lemming", "format", "formatter", "lint", "linting", "linter"]
@@ -19,9 +19,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -43,20 +40,12 @@ Homepage = "https://github.com/koviubi56/lemming"
 [project.scripts]
 lemming = "lemming.__main__:main"
 
-[tool.isort]
-profile = "black"
-
 [tool.ruff]
 select = ["ALL"]
-ignore = ["ANN101", "COM812", "D105", "D212", "FA100", "FBT"]
-per-file-ignores = { "__main__.py" = [
-    "PLR0913",
-    "T201",
-], "setup.py" = [
-    "D100",
-] }
+ignore = ["ANN101", "COM812", "D105", "D212", "FA100", "FA102", "FBT"]
+per-file-ignores = { "__main__.py" = ["PLR0913", "T201"], "setup.py" = ["D"] }
 line-length = 79
-target-version = "py38"
+target-version = "py310"
 
 fixable = [
     "F632",
@@ -114,4 +103,4 @@ command = "{pyexe} -m pyroma {path}"
 
 [[tool.lemming.linters]]
 packages = ["vermin"]
-command = "vermin --target=3.7 --eval-annotations --backport typing -vv src"
+command = "vermin --target=3.10- --eval-annotations --backport typing --backport dataclasses --backport typing_extensions -vv src"

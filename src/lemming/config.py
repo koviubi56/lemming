@@ -23,13 +23,8 @@ import secrets
 import shlex
 import subprocess
 import sys
-from typing import (
-    Iterable,
-    List,
-    Optional,
-    Union,
-    cast,
-)
+from collections.abc import Iterable
+from typing import cast
 
 import pydantic
 from typing_extensions import NamedTuple, Self, TypeVar
@@ -67,13 +62,13 @@ class FormatterOrLinter(pydantic.BaseModel):
 
     Args:
         name (str, optional): The name of the formatter/linter. Only used to
-        specify which formatter/linter to run. Defaults to packages[0].
-        packages (List[str]): The packages' names (optionally versions
-        with "==x.y.z") to install with pip.
+            specify which formatter/linter to run. Defaults to packages[0].
+        packages (list[str]): The packages' names (optionally versions
+            with "==x.y.z") to install with pip.
     """
 
     name: str = ""
-    packages: List[str]
+    packages: list[str]
 
     @pydantic.model_validator(mode="after")
     def _validate_name(self, _: object) -> Self:
@@ -187,18 +182,18 @@ class Formatter(FormatterOrLinter):
 
     Args:
         packages (List[str]): The packages' names (optionally versions
-        with "==x.y.z") to install with pip.
+            with "==x.y.z") to install with pip.
         format_command (str): The command to use to format the code (with the
-        `format` subcommand)
-        check_command (Optional[str], optional): The command to use to check
-        the code (with the `check` subcommand). Defaults to None.
+            `format` subcommand)
+        check_command (str | None, optional): The command to use to check
+            the code (with the `check` subcommand). Defaults to None.
         allow_nonzero_on_format (bool, optional): Whether or not to allow the
-        formatter to return a non-zero exit status when formatting. Defaults
-        to False.
+            formatter to return a non-zero exit status when formatting.
+            Defaults to False.
     """
 
     format_command: str
-    check_command: Optional[str] = None
+    check_command: str | None = None
     allow_nonzero_on_format: bool = False
 
     def run_format(
@@ -292,10 +287,10 @@ class Linter(FormatterOrLinter):
 
     Args:
         packages (List[str]): The packages' names (optionally versions
-        with "==x.y.z") to install with pip.
+            with "==x.y.z") to install with pip.
         command (str): The command to use to lint the code
         run_first (bool, optional): Whether or not to run this linter before
-        all other linters and formatters.
+            all other linters and formatters.
     """
 
     command: str
@@ -342,32 +337,32 @@ class Config(pydantic.BaseModel):
     The configuration.
 
     Args:
-        formatters (List[Formatter], optional): The formatters. Default
-        factory is list.
-        linters (List[Linter], optional): The linters. Default factory is list.
+        formatters (list[Formatter], optional): The formatters. Default
+            factory is list.
+        linters (list[Linter], optional): The linters. Default factory is list.
         fail_fast (bool, optional): Whether or not to immediately quit when a
-        formatter or linter fails.
+            formatter or linter fails.
     """
 
-    formatters: List[Formatter] = pydantic.Field(default_factory=list)
-    linters: List[Linter] = pydantic.Field(default_factory=list)
+    formatters: list[Formatter] = pydantic.Field(default_factory=list)
+    linters: list[Linter] = pydantic.Field(default_factory=list)
     fail_fast: bool = True
 
-    def get_first_linters(self) -> List[Linter]:
+    def get_first_linters(self) -> list[Linter]:
         """
         Get the first linters.
 
         Returns:
-            List[Linter]: Get linters, where `linter.run_first is True`
+            list[Linter]: Get linters, where `linter.run_first is True`
         """
         return [linter for linter in self.linters if linter.run_first]
 
-    def get_other_linters(self) -> List[Linter]:
+    def get_other_linters(self) -> list[Linter]:
         """
         Get the other linters.
 
         Returns:
-            List[Linter]: Get linters, where `linter.run_first is False`
+            list[Linter]: Get linters, where `linter.run_first is False`
         """
         return [linter for linter in self.linters if not linter.run_first]
 
@@ -378,7 +373,7 @@ def get_config_dot_lemming(file: pathlib.Path) -> Config:
 
     Args:
         file (pathlib.Path): The config file to read from. Must use
-        the `.lemming.toml` syntax (not the `pyproject.toml` syntax).
+            the `.lemming.toml` syntax (not the `pyproject.toml` syntax).
 
     Returns:
         Config: The configuration.
@@ -394,10 +389,10 @@ def get_config_pyproject(pyproject: pathlib.Path) -> Config:
 
     Args:
         pyproject (pathlib.Path): The config file to read from. Must use the
-        `pyproject.toml` syntax (not the `.lemming.toml` syntax).
+            `pyproject.toml` syntax (not the `.lemming.toml` syntax).
 
     Raises:
-        ValueError: If the config file does not contain a `tool.lemming` key.
+        ValueError: If the config file does not contain a tool.lemming key.
 
     Returns:
         Config: The configuration.
@@ -411,16 +406,16 @@ def get_config_pyproject(pyproject: pathlib.Path) -> Config:
     return Config.model_validate(lemming_config)
 
 
-def get_config(_folder: Union[os.PathLike[str], str]) -> Config:
+def get_config(_folder: os.PathLike[str] | str) -> Config:
     """
     Get the configuration from `_folder` or a parent folder recursively.
 
     Args:
-        _folder (Union[os.PathLike[str], str]): The folder to use.
+        _folder (os.PathLike[str] | str): The folder to use.
 
     Raises:
         FileNotFoundError: If no `pyproject.toml` nor `.lemming.toml` file was
-        found in `_folder` and its parents.
+            found in `_folder` and its parents.
 
     Returns:
         Config: The configuration.

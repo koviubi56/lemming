@@ -21,10 +21,12 @@ import dataclasses
 import pathlib
 import sys
 import time
-from typing import List, Optional
+
+# from some reason Typer doesn't support X | None
+from typing import Annotated, Optional
 
 import typer
-from typing_extensions import Annotated, Self
+from typing_extensions import Self
 
 from . import __version__, logger
 from .config import (
@@ -65,13 +67,13 @@ class Settings:
     Args:
         what_to_quiet (WhatToQuiet): What to quiet.
         config (Config): The configuration.
-        only (Optional[List[str]]): Only run these formatters/linters. If
-        None, run all.
+        only (list[str] | None): Only run these formatters/linters. If
+            None, run all.
     """
 
     what_to_quiet: WhatToQuiet
     config: Config
-    only: Optional[List[str]]
+    only: list[str] | None
 
     def should_run(self, name: str) -> bool:
         """
@@ -106,14 +108,14 @@ class Timer:
 
 
 def run_linter(
-    linter: Linter, paths: List[pathlib.Path], settings: Settings
+    linter: Linter, paths: list[pathlib.Path], settings: Settings
 ) -> bool:
     """
     Run `linter`.
 
     Args:
         linter (Linter): The linter to run.
-        paths (List[pathlib.Path]): The paths to lint.
+        paths (list[pathlib.Path]): The paths to lint.
         settings (Settings): The settings.
 
     Raises:
@@ -138,12 +140,12 @@ def run_linter(
         return True
 
 
-def linter_first(paths: List[pathlib.Path], settings: Settings) -> bool:
+def linter_first(paths: list[pathlib.Path], settings: Settings) -> bool:
     """
     Run the first linters.
 
     Args:
-        paths (List[pathlib.Path]): The paths to lint.
+        paths (list[pathlib.Path]): The paths to lint.
         settings (Settings): The settings.
 
     Returns:
@@ -167,7 +169,7 @@ def linter_first(paths: List[pathlib.Path], settings: Settings) -> bool:
 
 def run_formatter(
     formatter: Formatter,
-    paths: List[pathlib.Path],
+    paths: list[pathlib.Path],
     format_: bool,
     settings: Settings,
 ) -> bool:
@@ -176,7 +178,7 @@ def run_formatter(
 
     Args:
         formatter (Formatter): The formatter to run.
-        paths (List[pathlib.Path]): The paths to format/check.
+        paths (list[pathlib.Path]): The paths to format/check.
         format_ (bool): Whether or not to format or check.
         settings (Settings): The settings.
 
@@ -203,14 +205,14 @@ def run_formatter(
 
 
 def formatter(
-    format_: bool, paths: List[pathlib.Path], settings: Settings
+    format_: bool, paths: list[pathlib.Path], settings: Settings
 ) -> bool:
     """
     Run all formatters.
 
     Args:
         format_ (bool): Whether or not to format or check.
-        paths (List[pathlib.Path]): The paths to format/check.
+        paths (list[pathlib.Path]): The paths to format/check.
         settings (Settings): The settings.
 
     Returns:
@@ -232,12 +234,12 @@ def formatter(
         return return_value
 
 
-def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
+def linter_other(paths: list[pathlib.Path], settings: Settings) -> bool:
     """
     Run all other linters.
 
     Args:
-        paths (List[pathlib.Path]): The paths to lint.
+        paths (list[pathlib.Path]): The paths to lint.
         settings (Settings): The settings.
 
     Returns:
@@ -259,12 +261,12 @@ def linter_other(paths: List[pathlib.Path], settings: Settings) -> bool:
         return return_value
 
 
-def run(paths: List[pathlib.Path], format_: bool, settings: Settings) -> None:
+def run(paths: list[pathlib.Path], format_: bool, settings: Settings) -> None:
     """
     Run all linters and formatters.
 
     Args:
-        paths (List[pathlib.Path]): The paths to check.
+        paths (list[pathlib.Path]): The paths to check.
         format_ (bool): Whether or not to format or check.
         settings (Settings): The settings.
 
@@ -346,24 +348,24 @@ def both(
     quiet_pip: bool,
     verbose: bool,
     quiet: bool,
-    config: Optional[pathlib.Path],
-    only: Optional[List[str]],
+    config: pathlib.Path | None,
+    only: list[str] | None,
 ) -> Settings:
     """
     Create the settings, and do some stuff with the given options.
 
     Args:
         quiet_commands (bool): Whether or not to stop the commands from
-        writing to stdout and stderr.
+            writing to stdout and stderr.
         quiet_pip (bool): Whether ot not to stop pip from writing to stdout
-        and stderr
+            and stderr
         verbose (bool): Decrease the loggers threshold by 10 (done by the
-        callback).
+            callback).
         quiet (bool): Increase the loggers threshold by 10 (done by the
-        callback).
-        config (Optional[pathlib.Path]): The configuration to use or None.
-        only (Optional[List[str]]): Only run these formatters/linters. If
-        None, run all.
+            callback).
+        config (pathlib.Path | None): The configuration to use or None.
+        only (list[str] | None): Only run these formatters/linters. If
+            None, run all.
 
     Raises:
         typer.Exit: If both verbose and quiet is passed.
@@ -391,7 +393,7 @@ def both(
 
 @app.command("format")
 def format_(
-    paths: Annotated[List[pathlib.Path], typer.Argument(exists=True)],
+    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)],
     quiet_commands: Annotated[
         bool,
         typer.Option(
@@ -432,13 +434,13 @@ def format_(
         ),
     ] = False,
     config: Annotated[
-        Optional[pathlib.Path],
+        Optional[pathlib.Path],  # noqa: UP007
         typer.Option(
             exists=True, dir_okay=False, help="The config file to use."
         ),
     ] = None,
     only: Annotated[
-        Optional[List[str]],
+        Optional[list[str]],  # noqa: UP007
         typer.Option(
             help="Only run these formatters/linters (may be passed multiple"
             " times)"
@@ -455,7 +457,7 @@ def format_(
 
 @app.command()
 def check(
-    paths: Annotated[List[pathlib.Path], typer.Argument(exists=True)],
+    paths: Annotated[list[pathlib.Path], typer.Argument(exists=True)],
     quiet_commands: Annotated[
         bool,
         typer.Option(
@@ -496,13 +498,13 @@ def check(
         ),
     ] = False,
     config: Annotated[
-        Optional[pathlib.Path],
+        Optional[pathlib.Path],  # noqa: UP007
         typer.Option(
             exists=True, dir_okay=False, help="The config file to use"
         ),
     ] = None,
     only: Annotated[
-        Optional[List[str]],
+        Optional[list[str]],  # noqa: UP007
         typer.Option(
             help="Only run these formatters/linters (may be passed multiple"
             " times)"
@@ -523,7 +525,7 @@ def install_pre_commit(git_repository: pathlib.Path) -> None:
 
     Args:
         git_repository (pathlib.Path): The root directory of the git
-        repository.
+            repository.
 
     Raises:
         typer.Exit: If `git_repository` doesn't exist

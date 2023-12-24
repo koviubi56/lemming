@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2023-12-24
+
+### Changed
+
+- Now supporting mylog 0.9.0; **dropped support for python 3.7, 3.8, and 3.9!**
+
 ## [0.6.2] - 2023-07-31
 
 ### Changed
