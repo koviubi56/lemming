@@ -1,14 +1,14 @@
 # Lemming
 
 [![Hits-of-Code](https://hitsofcode.com/github/koviubi56/lemming?branch=main)](https://hitsofcode.com/github/koviubi56/lemming/view?branch=main)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/d421571132f64a7dbd63fef92cf36e3e)](https://www.codacy.com/gh/koviubi56/lemming/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=koviubi56/lemming&amp;utm_campaign=Badge_Grade)
-![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/koviubi56/lemming)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 ![semantic-release](https://img.shields.io/badge/%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)
 ![GitHub](https://img.shields.io/github/license/koviubi56/lemming)
 ![PyPI](https://img.shields.io/pypi/v/python-lemming)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/python-lemming)
 ![PyPI - Format](https://img.shields.io/pypi/format/python-lemming)
+![PyPI - Implementation](https://img.shields.io/pypi/implementation/python-mylog)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/koviubi56/mylog/lemming.yml?label=CI)
 
 **Lemming** is a tool for formatting and linting your code. With Lemming, everyone will use the same formatters and linters, with the same version.
 
