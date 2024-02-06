@@ -41,12 +41,13 @@ Homepage = "https://github.com/koviubi56/lemming"
 lemming = "lemming.__main__:main"
 
 [tool.ruff]
-select = ["ALL"]
-ignore = ["ANN101", "COM812", "D105", "D212", "FA100", "FA102", "FBT"]
-per-file-ignores = { "__main__.py" = ["PLR0913", "T201"], "setup.py" = ["D"] }
 line-length = 79
 target-version = "py310"
 
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["ANN101", "COM812", "D105", "D212", "FA100", "FA102", "FBT"]
+per-file-ignores = { "__main__.py" = ["PLR0913", "T201"], "setup.py" = ["D"] }
 fixable = [
     "F632",
     "E711",
@@ -80,17 +81,17 @@ fixable = [
     "SIM212",
 ]
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 inline-quotes = "double"
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 ignore-decorators = ["typing.overload"]
 
 [[tool.lemming.formatters]]
 packages = ["ruff"]
-format_command = "{pyexe} -m ruff check --show-source --fix -n {path}"
-check_command = "{pyexe} -m ruff check --show-source --show-fixes -n {path}"
+format_command = "{pyexe} -m ruff check --output-format=full --fix -n {path}"
+check_command = "{pyexe} -m ruff check --output-format=full --show-fixes -n {path}"
 
 [[tool.lemming.formatters]]
 packages = ["ruff"]
@@ -100,7 +101,3 @@ check_command = "{pyexe} -m ruff format --check {path}"
 [[tool.lemming.linters]]
 packages = ["pyroma"]
 command = "{pyexe} -m pyroma {path}"
-
-[[tool.lemming.linters]]
-packages = ["vermin"]
-command = "vermin --target=3.10- --eval-annotations --backport typing --backport dataclasses --backport typing_extensions -vv src"

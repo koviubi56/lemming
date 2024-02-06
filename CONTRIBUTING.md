@@ -119,20 +119,11 @@ How to report them can be found in the [SECURITY.md](SECURITY.md) file.
 
 ## DCO
 
-- _"our project"_ and _"this project"_ refer to Lemming.
-- _"contribution"_ refers to any contribution, committing, and/or pushing to our project.
-- _"contributor"_, _"you"_, _"I"_, and _"me"_ refer to the person who made the contribution.
-- _"DCO"_ refers to the Developer Certificate of Origin.
+By contributing to our project you fully agree to the whole DCO.
 
-By contributing to our project you MUST fully understand and fully agree to the whole DCO.
+By [signing off](https://git-scm.com/docs/git-commit#Documentation/git-commit.txt--s) your git commits you explicitly agree with the DCO.
 
-Contributing to our project in any way means that you fully understand and fully agree to the whole DCO.
-
-If you do not fully understand and fully agree to the DCO, you may not and MUST NOT contribute to our project.
-
-Contributions and pull requests may be rejected if you do not fully understand and fully agree to the whole DCO.
-
-A copy of the DCO can be read at <https://developercertificate.org/> or here:
+A copy of the DCO can be found at <https://developercertificate.org/> or here:
 
 > Developer Certificate of Origin
 > Version 1.1
@@ -167,3 +158,5 @@ A copy of the DCO can be read at <https://developercertificate.org/> or here:
 > personal information I submit with it, including my sign-off) is
 > maintained indefinitely and may be redistributed consistent with
 > this project or the open source license(s) involved.
+
+Any contribution submitted for inclusion in the project by you, shall be licensed under the project's license, without any additional terms or conditions.
