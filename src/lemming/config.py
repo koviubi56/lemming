@@ -1,7 +1,7 @@
 """
 Lemming is a tool for formatting and linting code.
 
-Copyright (C) 2022  Koviubi56
+Copyright (C) 2022-2024  Koviubi56
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ from . import logger
 try:
     import tomllib  # novermin
 except Exception:  # noqa: BLE001
-    import tomli as tomllib
+    import tomli as tomllib  # type: ignore[no-redef]
 
 CONFIG_FILE_NAME = ".lemming.toml"
 CONFIG_FILE_NOT_FOUND_EXC = FileNotFoundError(
@@ -143,10 +143,10 @@ class FormatterOrLinter(pydantic.BaseModel):
         )
         completed_process = cast(
             subprocess.CompletedProcess[str],
-            subprocess.run(
+            subprocess.run(  # type: ignore[call-overload]
                 splitted,
-                check=False,
                 shell=False,  # noqa: S603
+                check=False,
                 **quiet_kwargs,
             ),
         )

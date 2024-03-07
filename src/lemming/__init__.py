@@ -1,7 +1,7 @@
 """
 Lemming is a tool for formatting and linting code.
 
-Copyright (C) 2022  Koviubi56
+Copyright (C) 2022-2024  Koviubi56
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

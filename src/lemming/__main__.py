@@ -1,7 +1,7 @@
 """
 Lemming is a tool for formatting and linting code.
 
-Copyright (C) 2022  Koviubi56
+Copyright (C) 2022-2024  Koviubi56
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -95,8 +95,8 @@ class Timer:
 
     def __init__(self) -> None:
         """Create a Timer instance."""
-        self.start = None
-        self.time = None
+        self.start: float | None = None
+        self.time: float | None = None
 
     def __enter__(self) -> Self:
         self.start = time.perf_counter()
@@ -610,7 +610,7 @@ def callback(
 
 def main() -> None:
     """Main."""
-    return app()
+    app()
 
 
 if __name__ == "__main__":

@@ -40,6 +40,10 @@ Homepage = "https://github.com/koviubi56/lemming"
 [project.scripts]
 lemming = "lemming.__main__:main"
 
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 79
 target-version = "py310"
@@ -101,3 +105,7 @@ check_command = "{pyexe} -m ruff format --check {path}"
 [[tool.lemming.linters]]
 packages = ["pyroma"]
 command = "{pyexe} -m pyroma {path}"
+
+[[tool.lemming.linters]]
+packages = ["mypy"]
+command = "{pyexe} -m mypy {path}"
